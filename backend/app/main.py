@@ -8,13 +8,17 @@ from app.config import (
     MODEL_NAME,
 )
 
+from app.services.pedagogical_controller import PedagogicalController
+from app.api import login_auth   # Tala's part
+
 app = FastAPI()
 
+# include Tala's router
+app.include_router(login_auth.router)
 
+# Haya's chatbot setup
 class ChatRequest(BaseModel):
     message: str
-
-
 
 llm = ChatOpenAI(
     api_key=FIREWORKS_API_KEY,
@@ -22,26 +26,22 @@ llm = ChatOpenAI(
     model=MODEL_NAME,
     temperature=0.7,
 )
-from app.services.pedagogical_controller import PedagogicalController
 
 controller = PedagogicalController()
 
 def generate_response(question):
-
-    attempts = 1   # temporary for demo
-
+    attempts = 1
     prompt = controller.build_prompt(question, attempts)
-
     response = llm.invoke(prompt)
-
     return response
 
-
+# Haya's endpoint
 @app.post("/chat")
 def chat(request: ChatRequest):
     response = generate_response(request.message)
-    print("Generated response:", response.content)
     return {"response": response.content}
 
-
-
+# Tala’s endpoint
+@app.get("/")
+def home():
+    return {"message": "Welcome to Learnix API!"}
