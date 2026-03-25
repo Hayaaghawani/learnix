@@ -1,0 +1,6 @@
+# Ignore the API key file
+.env
+
+# Ignore Python cache
+__pycache__/
+*.py[cod]
