@@ -1,4 +1,3 @@
-# app/services/pedagogical_controller.py
 
 class PedagogicalController:
 
@@ -22,7 +21,7 @@ Elements are accessed using indices starting from 0.
         }
 
 
-    # ---------- Concept Detection ----------
+    
     def detect_concept(self, question: str):
 
         q = question.lower()
@@ -39,7 +38,6 @@ Elements are accessed using indices starting from 0.
         return None
 
 
-    # ---------- Help Level Decision ----------
     def determine_help_level(self, attempts: int):
 
         if attempts == 0:
@@ -52,7 +50,6 @@ Elements are accessed using indices starting from 0.
             return "solution"
 
 
-    # ---------- Retrieve Learning Context ----------
     def retrieve_context(self, concept):
 
         if concept in self.course_knowledge:
@@ -61,7 +58,6 @@ Elements are accessed using indices starting from 0.
         return ""
 
 
-    # ---------- Build Prompt ----------
     def build_prompt(self, question, attempts):
 
         concept = self.detect_concept(question)
