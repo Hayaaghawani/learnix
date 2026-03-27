@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI#tala
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware#tala
+from app.api.login_auth import router as auth_router#tala
 from langchain_openai import ChatOpenAI
+
 
 from app.config import (
     FIREWORKS_API_KEY,
@@ -42,6 +45,16 @@ def chat(request: ChatRequest):
     return {"response": response.content}
 
 # Tala’s endpoint
-@app.get("/")
-def home():
-    return {"message": "Welcome to Learnix API!"}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router)
+
