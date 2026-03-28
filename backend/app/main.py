@@ -2,8 +2,9 @@ from fastapi import FastAPI#tala
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware#tala
 from app.api.login_auth import router as auth_router#tala
+from app.api import login_auth, users, admin, notifications# Tala's part
 from langchain_openai import ChatOpenAI
-
+from app.services.pedagogical_controller import PedagogicalController
 
 from app.config import (
     FIREWORKS_API_KEY,
@@ -11,13 +12,14 @@ from app.config import (
     MODEL_NAME,
 )
 
-from app.services.pedagogical_controller import PedagogicalController
-from app.api import login_auth   # Tala's part
 
 app = FastAPI()
 
 # include Tala's router
 app.include_router(login_auth.router)
+app.include_router(users.router)
+app.include_router(admin.router)
+#app.include_router(notifications.router)
 
 # Haya's chatbot setup
 class ChatRequest(BaseModel):
