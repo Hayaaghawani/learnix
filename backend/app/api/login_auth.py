@@ -1,11 +1,12 @@
 # libraries
-from fastapi import APIRouter, HTTPException,Request
+from fastapi import APIRouter, HTTPException,Request, Depends, Header
 from passlib.context import CryptContext
 from sqlalchemy import text
 from app.core.database import engine
 from app.schema.auth import LoginRequest
 import jwt
 from datetime import datetime, timedelta
+
 
 #Generate a JWT token
 SECRET_KEY = "P$^tLe@rn!g"
@@ -42,6 +43,8 @@ def create_access_token(userid: str):
     return token, expire
 
 
+
+
 #LOGIN ENDPOINT
 @router.post("/login")
 def login(request: LoginRequest):
@@ -62,12 +65,12 @@ def login(request: LoginRequest):
         if not result:
             conn.execute(
                 text("""
-                    INSERT INTO Login_Logs (emailUsed, success)
+                    INSERT INTO login_logs (emailUsed, success)
                     VALUES (:email, :success)
                 """),
                 {
                     "email": request.email,
-                    "success": True,
+                    "success": False,
                 }
             )
             conn.commit()
@@ -159,8 +162,8 @@ def logout(request: Request):
 
         print("SESSION FOUND:", result)
 
-        if not result:
-            raise HTTPException(status_code=401, detail="Session not found or already logged out")
+        #if not result:
+            #raise HTTPException(status_code=401, detail="Session not found or already logged out")
 
         conn.execute(
             text("""
@@ -173,3 +176,111 @@ def logout(request: Request):
         conn.commit()
 
     return {"message": "Logout successful"}
+
+
+# proves and reads that identity
+
+
+def get_current_user(request: Request):
+    authorization = request.headers.get("Authorization")
+
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization format")
+
+    token = authorization.split(" ", 1)[1].strip()
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        userid = payload.get("userid")
+
+        if not userid:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    with engine.connect() as conn:
+        session_row = conn.execute(
+            text("""
+                SELECT userid, token, expiresAt
+                FROM sessions
+                WHERE token = :token
+            """),
+            {"token": token}
+        ).fetchone()
+
+        if not session_row:
+            raise HTTPException(status_code=401, detail="Session not found")
+
+        user_row = conn.execute(
+            text("""
+                SELECT userid, email, role
+                FROM users
+                WHERE userid = :userid
+            """),
+            {"userid": userid}
+        ).fetchone()
+
+        if not user_row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "userid": str(user_row[0]),
+        "email": user_row[1],
+        "role": user_row[2],
+        "token": token
+    }
+
+
+def require_role(allowed_roles: list):
+    def role_checker(current_user: dict = Depends(get_current_user)):
+        if current_user["role"] not in allowed_roles:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to access this resource"
+            )
+        return current_user
+    return role_checker
+
+#get user's data
+@router.get("/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return {
+        "message": "Authorized user",
+        "user": {
+            "userid": current_user["userid"],
+            "email": current_user["email"],
+            "role": current_user["role"]
+        }
+    }
+
+#admin page 
+@router.get("/admin-only")
+def admin_only(current_user: dict = Depends(require_role(["admin"]))):
+    return {
+        "message": "Welcome admin",
+        "user": current_user
+    }
+
+#instructor
+@router.get("/instructor-only")
+def instructor_only(current_user: dict = Depends(require_role(["instructor"]))):
+    return {
+        "message": "Welcome instructor",
+        "user": current_user
+    }
+
+#student
+@router.get("/student-only")
+def student_only(current_user: dict = Depends(require_role(["student"]))):
+    return {
+        "message": "Welcome student",
+        "user": current_user
+    }
+
+
