@@ -1,31 +1,58 @@
-import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import { Mail, Lock, Eye, EyeOff, Instagram, Facebook, Linkedin } from 'lucide-react'
+import { useNavigate } from "react-router-dom"
+import { useState } from "react"
+import { Mail, Lock, Eye, EyeOff, Instagram, Facebook, Linkedin } from "lucide-react"
 import { motion } from "framer-motion"
 
 function Login() {
   const navigate = useNavigate()
 
-  const [role, setRole] = useState('student')
+  const [role, setRole] = useState("student")
   const [showPassword, setShowPassword] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
 
-  const handleLogin = () => {
+ const API_BASE = "http://127.0.0.1:8000"
+
+const handleLogin = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email.trim(),
+        password,
+      }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      alert(data.detail || `Login failed (${response.status})`)
+      return
+    }
+
+    localStorage.setItem("token", data.access_token)
+    localStorage.setItem("userid", data.userid)
+
+    alert("Login successful")
     navigate(`/${role}`)
+  } catch (error) {
+    console.error("FETCH ERROR:", error)
+    alert("Cannot connect to backend: " + error.message)
   }
+}
 
   return (
-<div className="min-h-screen flex flex-col bg-[#D6CEDC] pt-24">
-      {/* CENTER SECTION */}
+    <div className="min-h-screen flex flex-col bg-[#D6CEDC] pt-24">
       <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition duration-300 p-10 w-full max-w-xl mx-auto mt-10 relative z-10">
-
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8 }}
           className="bg-white/80 backdrop-blur-md w-full max-w-md rounded-2xl shadow-xl p-10 border border-white/30 relative z-10"
         >
-
-          {/* Logo */}
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -42,23 +69,24 @@ function Login() {
           </p>
 
           <div className="space-y-5">
-
-            {/* Email */}
             <div className="relative">
               <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
               <input
                 type="email"
                 placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-[#E0D8E6] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8E7DA5] transition"
               />
             </div>
 
-            {/* Password */}
             <div className="relative">
               <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-10 py-3 border border-[#E0D8E6] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8E7DA5] transition"
               />
               <div
@@ -69,7 +97,6 @@ function Login() {
               </div>
             </div>
 
-            {/* Role */}
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -86,27 +113,22 @@ function Login() {
             >
               Sign In
             </button>
-<p className="text-sm text-center mt-4">
-  <span className="text-gray-600">
-    Forgot Password?{" "}
-  </span>
 
-  <span
-    onClick={() => navigate("/forgot-password")}
-    className="text-[#8E7AAE] cursor-pointer hover:underline font-medium"
-  >
-    Click here
-  </span>
-</p>
+            <p className="text-sm text-center mt-4">
+              <span className="text-gray-600">Forgot Password? </span>
+              <span
+                onClick={() => navigate("/forgot-password")}
+                className="text-[#8E7AAE] cursor-pointer hover:underline font-medium"
+              >
+                Click here
+              </span>
+            </p>
           </div>
         </motion.div>
 
-        {/* Soft Glow */}
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#CBBED8]/40 to-transparent blur-2xl"></div>
-
       </div>
 
-      {/* Decorative Section */}
       <div className="relative w-full h-24 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.12]">
           <svg width="100%" height="100%">
@@ -138,77 +160,67 @@ function Login() {
         </svg>
       </div>
 
-      {/* FOOTER */}
-     <footer className="w-full bg-[#6E5C86] text-white py-8">
-  <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+      <footer className="w-full bg-[#6E5C86] text-white py-8">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="text-sm opacity-90">
+            © 2026 Learnix. All rights reserved.
+          </div>
 
-    <div className="text-sm opacity-90">
-      © 2026 Learnix. All rights reserved.
-    </div>
+          <div className="flex gap-8 text-sm tracking-wide">
+            <span
+              onClick={() => navigate("/about")}
+              className="cursor-pointer hover:text-yellow-300 transition"
+            >
+              About Us
+            </span>
 
-    {/* Navigation Links */}
-    <div className="flex gap-8 text-sm tracking-wide">
+            <span
+              onClick={() => navigate("/contact")}
+              className="cursor-pointer hover:text-yellow-300 transition"
+            >
+              Contact
+            </span>
 
-      <span
-        onClick={() => navigate('/about')}
-        className="cursor-pointer hover:text-yellow-300 transition"
-      >
-        About Us
-      </span>
+            <span
+              onClick={() => navigate("/privacy")}
+              className="cursor-pointer hover:text-yellow-300 transition"
+            >
+              Privacy Policy
+            </span>
+          </div>
 
-      <span
-        onClick={() => navigate('/contact')}
-        className="cursor-pointer hover:text-yellow-300 transition"
-      >
-        Contact
-      </span>
+          <div className="flex gap-5">
+            <a
+              href="https://www.instagram.com/learnix100/?hl=en"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Instagram
+                className="cursor-pointer hover:text-yellow-300 transition"
+                size={18}
+              />
+            </a>
 
-      <span
-        onClick={() => navigate('/privacy')}
-        className="cursor-pointer hover:text-yellow-300 transition"
-      >
-        Privacy Policy
-      </span>
+            <a
+              href="https://web.facebook.com/profile.php?id=61587731650405"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Facebook
+                className="cursor-pointer hover:text-yellow-300 transition"
+                size={18}
+              />
+            </a>
 
-    </div>
-
-    {/* Social Icons */}
-    <div className="flex gap-5">
-
-      <a
-        href="https://www.instagram.com/learnix100/?hl=en"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <Instagram
-          className="cursor-pointer hover:text-yellow-300 transition"
-          size={18}
-        />
-      </a>
-
-      <a
-        href="https://web.facebook.com/profile.php?id=61587731650405"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <Facebook
-          className="cursor-pointer hover:text-yellow-300 transition"
-          size={18}
-        />
-      </a>
-
-      <a href="#">
-        <Linkedin
-          className="cursor-pointer hover:text-yellow-300 transition"
-          size={18}
-        />
-      </a>
-
-    </div>
-
-  </div>
-</footer>
-
+            <a href="#">
+              <Linkedin
+                className="cursor-pointer hover:text-yellow-300 transition"
+                size={18}
+              />
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
