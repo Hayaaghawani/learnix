@@ -1,5 +1,6 @@
 # Ignore the API key file
-.env
+
+# .env should be ignored later on but now i keep it here for testing purposes
 
 # Ignore Python cache
 __pycache__/
