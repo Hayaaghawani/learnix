@@ -45,3 +45,7 @@ uuid_utils==0.14.1
 uvicorn==0.42.0
 xxhash==3.6.0
 zstandard==0.25.0
+langchain-text-splitters==1.1.1
+langchain-community==0.0.20
+pypdf==4.0.0
+langchain-core==0.1.0
