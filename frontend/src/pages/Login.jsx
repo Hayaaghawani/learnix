@@ -5,14 +5,54 @@ import { motion } from "framer-motion"
 
 function Login() {
   const navigate = useNavigate()
-
-  const [role, setRole] = useState('student')
+const [email, setEmail] = useState('')
+const [password, setPassword] = useState('')
+  
   const [showPassword, setShowPassword] = useState(false)
+const handleLogin = async () => {
+  try {
+    const res = await fetch("http://localhost:8000/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email,
+        password
+      })
+    })
 
-  const handleLogin = () => {
-    navigate(`/${role}`)
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert(data.detail || "Login failed")
+      return
+    }
+
+    localStorage.setItem("token", data.access_token)
+
+    const userRes = await fetch("http://localhost:8000/auth/me", {
+      headers: {
+        Authorization: `Bearer ${data.access_token}`
+      }
+    })
+
+    const userData = await userRes.json()
+
+    console.log("USER DATA:", userData)
+
+const role = userData.user?.role || userData.role
+    localStorage.setItem("user", JSON.stringify(userData.user))
+
+    if (role === "admin") navigate("/admin")
+    else if (role === "instructor") navigate("/instructor")
+    else navigate("/student")
+
+  } catch (error) {
+    console.error(error)
+    alert("Something went wrong")
   }
-
+}
   return (
 <div className="min-h-screen flex flex-col bg-[#D6CEDC] pt-24">
       {/* CENTER SECTION */}
@@ -47,20 +87,22 @@ function Login() {
             <div className="relative">
               <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
               <input
-                type="email"
-                placeholder="Email"
-                className="w-full pl-10 pr-4 py-3 border border-[#E0D8E6] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8E7DA5] transition"
-              />
+  type="email"
+  placeholder="Email"
+  onChange={(e) => setEmail(e.target.value)}
+  className="w-full pl-10 pr-4 py-3 border border-[#E0D8E6] rounded-lg ..."
+/>
             </div>
 
             {/* Password */}
             <div className="relative">
               <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                className="w-full pl-10 pr-10 py-3 border border-[#E0D8E6] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8E7DA5] transition"
-              />
+             <input
+  type={showPassword ? "text" : "password"}
+  placeholder="Password"
+  onChange={(e) => setPassword(e.target.value)}
+  className="w-full pl-10 pr-10 py-3 border border-[#E0D8E6] rounded-lg ..."
+/>
               <div
                 className="absolute right-3 top-3.5 cursor-pointer text-gray-500 hover:text-[#8E7DA5] transition"
                 onClick={() => setShowPassword(!showPassword)}
@@ -70,15 +112,7 @@ function Login() {
             </div>
 
             {/* Role */}
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full px-4 py-3 border border-[#E0D8E6] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8E7DA5]"
-            >
-              <option value="student">Student</option>
-              <option value="instructor">Instructor</option>
-              <option value="admin">Admin</option>
-            </select>
+          
 
             <button
               onClick={handleLogin}
