@@ -4,13 +4,19 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-# Tala's routers — untouched
-from app.api import login_auth, users, admin
-from app.api.login_auth import router as auth_router
+# Import routers from new v1 package
+from app.api.v1 import (
+    auth_router,
+    admin_router,
+    users_router,
+    courses_router,
+    exercises_router,
+    notifications_router,
+)
 
-# Haya's RAG stack
-from app.services.llm_service import RAGService
-from app.services.pedagogical_controller import PedagogicalController
+# Haya's RAG stack - updated imports
+from app.services.rag.llm_service import RAGService
+from app.services.rag.pedagogical_controller import PedagogicalController
 
 
 # ── App init ────────────────────────────────────────────────
@@ -27,18 +33,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Tala's routers
-app.include_router(login_auth.router)
-app.include_router(users.router)
-app.include_router(admin.router)
+# Include all routers
 app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(admin_router)
+app.include_router(courses_router)
+app.include_router(exercises_router)
+app.include_router(notifications_router)
 
 
 # ── RAG startup ─────────────────────────────────────────────
 # Runs once when the server starts.
 # Loads all knowledge base files, chunks, embeds, and indexes them.
 # This takes ~5 seconds on first run (model download already done).
-rag_service = RAGService(knowledge_base_path="knowledge_base")
+rag_service = RAGService(knowledge_base_path="data/knowledge_base")
 controller = PedagogicalController()
 
 
