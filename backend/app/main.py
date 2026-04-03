@@ -1,7 +1,7 @@
 from fastapi import FastAPI#tala
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware#tala
-from app.api import login_auth, users, admin, notifications, courses,exercises# Tala's part
+from app.api import login_auth, users, admin, notifications, courses,exercises,attempts# Tala's part
 from langchain_openai import ChatOpenAI
 from app.services.pedagogical_controller import PedagogicalController
 
@@ -19,6 +19,7 @@ app.include_router(login_auth.router)
 app.include_router(notifications.router)
 app.include_router(courses.router)
 app.include_router(exercises.router)
+app.include_router(attempts.router)
 #app.include_router(users.router)
 #app.include_router(admin.router)
 
