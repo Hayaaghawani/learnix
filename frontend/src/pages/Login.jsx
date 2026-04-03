@@ -3,56 +3,77 @@ import { useState } from 'react'
 import { Mail, Lock, Eye, EyeOff, Instagram, Facebook, Linkedin } from 'lucide-react'
 import { motion } from "framer-motion"
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8001"
+
 function Login() {
   const navigate = useNavigate()
-const [email, setEmail] = useState('')
-const [password, setPassword] = useState('')
-  
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-const handleLogin = async () => {
-  try {
-    const res = await fetch("http://localhost:8000/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email,
-        password
-      })
-    })
+  const [error, setError] = useState('')
 
-    const data = await res.json()
+  const handleLogin = async () => {
+    setError('')
 
-    if (!res.ok) {
-      alert(data.detail || "Login failed")
+    if (!email || !password) {
+      setError('Please enter both email and password.')
       return
     }
 
-    localStorage.setItem("token", data.access_token)
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      })
 
-    const userRes = await fetch("http://localhost:8000/auth/me", {
-      headers: {
-        Authorization: `Bearer ${data.access_token}`
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.detail || "Login failed. Check your email and password.")
+        return
       }
-    })
 
-    const userData = await userRes.json()
+      localStorage.setItem("token", data.access_token)
 
-    console.log("USER DATA:", userData)
+      const userRes = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${data.access_token}`
+        }
+      })
 
-const role = userData.user?.role || userData.role
-    localStorage.setItem("user", JSON.stringify(userData.user))
+      const userData = await userRes.json()
 
-    if (role === "admin") navigate("/admin")
-    else if (role === "instructor") navigate("/instructor")
-    else navigate("/student")
+      if (!userRes.ok) {
+        setError(userData.detail || "Failed to fetch user profile.")
+        return
+      }
 
-  } catch (error) {
-    console.error(error)
-    alert("Something went wrong")
+      const currentUser = userData.user || userData
+      const role = currentUser?.role
+
+      localStorage.setItem("user", JSON.stringify(currentUser))
+
+      if (role === "admin") {
+        navigate("/admin")
+      } else if (role === "instructor") {
+        navigate("/instructor")
+      } else if (role === "student") {
+        navigate("/student")
+      } else {
+        setError("Your account role is not recognized.")
+      }
+
+    } catch (error) {
+      console.error(error)
+      setError("Something went wrong. Please try again.")
+    }
   }
-}
   return (
 <div className="min-h-screen flex flex-col bg-[#D6CEDC] pt-24">
       {/* CENTER SECTION */}
@@ -120,7 +141,10 @@ const role = userData.user?.role || userData.role
             >
               Sign In
             </button>
-<p className="text-sm text-center mt-4">
+            {error && (
+              <p className="mt-4 text-center text-sm text-red-600">{error}</p>
+            )}
+            <p className="text-sm text-center mt-4">
   <span className="text-gray-600">
     Forgot Password?{" "}
   </span>
