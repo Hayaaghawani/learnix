@@ -1,0 +1,10 @@
+npm install
+npm install react react-dom
+npm install react-router-dom
+npm install recharts
+npm install lucide-react
+npm install framer-motion
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+npm install -D eslint @eslint/js eslint-plugin-react-hooks eslint-plugin-react-refresh globals
+npm install -D @vitejs/plugin-react vite
