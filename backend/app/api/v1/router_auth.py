@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from passlib.context import CryptContext
 from sqlalchemy import text
 from app.core.database import engine
-from app.schema.auth import LoginRequest
+from app.schemas import LoginRequest
 import jwt
 from datetime import datetime, timedelta
 

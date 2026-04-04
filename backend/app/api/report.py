@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 from app.core.database import engine
-from app.api.login_auth import get_current_user, require_role
+from app.api.v1.router_auth import get_current_user, require_role
 import uuid
 from datetime import date
 
