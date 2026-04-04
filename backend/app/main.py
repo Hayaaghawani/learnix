@@ -1,10 +1,7 @@
-# backend/app/main.py
-
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import routers from new v1 package
 from app.api.v1 import (
     auth_router,
     admin_router,
@@ -22,33 +19,28 @@ from app.services.rag.pedagogical_controller import PedagogicalController
 # ── App init ────────────────────────────────────────────────
 app = FastAPI()
 
+
+# include Tala's router
+app.include_router(auth_router)
+app.include_router(notifications_router)
+app.include_router(courses_router)
+app.include_router(exercises_router)
+#app.include_router(users_router)
+#app.include_router(admin_router)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Include all routers
-app.include_router(auth_router)
-app.include_router(users_router)
-app.include_router(admin_router)
-app.include_router(courses_router)
-app.include_router(exercises_router)
-app.include_router(notifications_router)
-
-
 # ── RAG startup ─────────────────────────────────────────────
 # Runs once when the server starts.
 # Loads all knowledge base files, chunks, embeds, and indexes them.
 # This takes ~5 seconds on first run (model download already done).
 rag_service = RAGService(knowledge_base_path="data/knowledge_base")
 controller = PedagogicalController()
-
 
 # ── In-memory attempts tracker ───────────────────────────────
 # Key: user_id (str), Value: attempt count (int)
@@ -109,3 +101,6 @@ def chat(request: ChatRequest):
         concept=concept,
         help_level=help_level,
     )
+
+
+

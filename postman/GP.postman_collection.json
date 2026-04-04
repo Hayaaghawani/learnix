@@ -1,0 +1,475 @@
+{
+  "info": {
+    "_postman_id": "f659d993-a87b-494d-85c8-d7b276b4146e",
+    "name": "GP",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "36697893"
+  },
+  "item": [
+    {
+      "name": "logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzQ4Mjc1NDh9.6ZQiAEEnaMo_A02jeoGdKZvHtqlxA4P_On2ytLQEvM0",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/auth/logout",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "auth",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/auth/me",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/auth/me?=",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "auth",
+            "me"
+          ],
+          "query": [
+            {
+              "key": "",
+              "value": ""
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/auth/instructor-only",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/auth/instructor-only",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "auth",
+            "instructor-only"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/notifications/my",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/notifications/my",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "notifications",
+            "my"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/notifications/{id}/read",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiJkMGY0MTIyMy03OTg0LTQ2MjktYTVhMC1iZGUxYjgwOWZjMDEiLCJleHAiOjE3NzQ4MjE1MzV9.TqwSc9C1MOXA8i2Rv4Q3-4ng4xoU2phvaICG-3olOWU",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/notifications/59abaa20-e07e-439c-ae4d-f316320ae7a5/read",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "notifications",
+            "59abaa20-e07e-439c-ae4d-f316320ae7a5",
+            "read"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/courses/my",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/courses/my",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "courses",
+            "my"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/courses/{course_id}",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/courses/e5f122e7-089e-42f9-96cf-ff05833891fa",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "courses",
+            "e5f122e7-089e-42f9-96cf-ff05833891fa"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/courses/",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiJkMGY0MTIyMy03OTg0LTQ2MjktYTVhMC1iZGUxYjgwOWZjMDEiLCJleHAiOjE3NzQ4MjYzNTV9.ylTdi3CgVwe1ztypj3j5aLM2CdWhatCN2Wh9iM9MlvY",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"courseName\": \"Physics 101\",\r\n  \"description\": \"Intro physics\",\r\n  \"languageUsed\": \"Python\",\r\n  \"startDate\": \"2026-05-01\",\r\n  \"endDate\": \"2026-07-01\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/courses/",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "courses",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/exercises/course/{course_id}",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/exercises/course/e5f122e7-089e-42f9-96cf-ff05833891fa",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "exercises",
+            "course",
+            "e5f122e7-089e-42f9-96cf-ff05833891fa"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/exercises/{exercise_id}",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/exercises/8b785b14-996c-4150-a347-20bf7a25691b",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "exercises",
+            "8b785b14-996c-4150-a347-20bf7a25691b"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/exercises/",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzQ4Mjc1NDh9.6ZQiAEEnaMo_A02jeoGdKZvHtqlxA4P_On2ytLQEvM0",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"courseId\": \"e5f122e7-089e-42f9-96cf-ff05833891fa\",\r\n  \"typeId\": \"7f39d2ca-4339-4e43-9cf1-f91f7df65bfe\",\r\n  \"title\": \"Sorting Problem\",\r\n  \"difficultyLevel\": \"Easy\",\r\n  \"exerciseType\": \"Coding\",\r\n  \"keyConcept\": \"Sorting\",\r\n  \"prerequisites\": \"Arrays\",\r\n  \"problem\": \"Write a function that sorts an array.\",\r\n  \"referenceSolution\": \"Use Python sorted().\",\r\n  \"dueDate\": \"2026-06-01\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/exercises/",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "exercises",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/attempts/my",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/attempts/my",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "attempts",
+            "my"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/attempts/{attempt_id}",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/attempts/bdb57242-a737-49ec-aa26-3a3b6cd50ace",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "attempts",
+            "bdb57242-a737-49ec-aa26-3a3b6cd50ace"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/attempts/",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzUwODM0ODV9.1pnr_c4MwOAi9xOUHoeqwOazY0qtztOw5DYZ0w83p0E",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n\r\n  \"exerciseId\": \"8b785b14-996c-4150-a347-20bf7a25691b\",\r\n  \"reportId\": \"5\",\r\n  \"submittedCode\": \"print('hello world')\"\r\n\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/attempts/",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "attempts",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/attempts/{attempt_id}/execution-summary",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/attempts/bdb57242-a737-49ec-aa26-3a3b6cd50ace/execution-summary",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "attempts",
+            "bdb57242-a737-49ec-aa26-3a3b6cd50ace",
+            "execution-summary"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
