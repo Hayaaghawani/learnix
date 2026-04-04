@@ -1,27 +1,34 @@
 
 import os
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from dotenv import load_dotenv
+from langchain_fireworks import FireworksEmbeddings
+
+load_dotenv()
 
 
 class EmbeddingFactory:
     """
-    Returns an embedding model based on the provider in .env
+    Returns an embedding model based on .env configuration.
     Follows mini-rag's EmbeddingFactory pattern.
 
-    Supported providers:
-        - "huggingface" : local, free, no API key needed (default)
+    Currently supported:
+        - "fireworks": nomic-embed-text-v1.5 via Fireworks API (default)
 
-    To add OpenAI later:
-        - "openai" : requires OPENAI_API_KEY in .env
+    To switch models, change EMBEDDING_MODEL in .env only.
+    No code changes needed.
     """
 
     @staticmethod
     def get_embedding(provider: str = None):
-        provider = provider or os.getenv("EMBEDDING_PROVIDER", "huggingface")
+        provider = provider or os.getenv("EMBEDDING_PROVIDER", "fireworks")
 
-        if provider == "huggingface":
-            return HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2"
+        if provider == "fireworks":
+            return FireworksEmbeddings(
+                fireworks_api_key=os.getenv("FIREWORKS_API_KEY"),
+                model=os.getenv(
+                    "EMBEDDING_MODEL",
+                    "nomic-ai/nomic-embed-text-v1.5",
+                ),
             )
 
         else:
