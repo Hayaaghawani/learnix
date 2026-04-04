@@ -8,7 +8,7 @@ import jwt
 from datetime import datetime, timedelta
 
 # JWT config
-SECRET_KEY = "P$^tLe@rn!g"
+SECRET_KEY = "P$^tLe@rn!g_PLATFORM_SECRET_KEY_2026_SECURE_32_BYTES"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 1
 
@@ -47,13 +47,14 @@ def login(request: LoginRequest):
         if not result:
             conn.execute(
                 text("""
-                    INSERT INTO login_logs (emailused, success, attemptedat)
-                    VALUES (:email, :success, :attemptedat)
+                    INSERT INTO login_logs (emailused, success, attemptedat, ipaddress)
+                    VALUES (:email, :success, :attemptedat, :ipaddress)
                 """),
                 {
                     "email": request.email,
                     "success": False,
-                    "attemptedat": datetime.utcnow()
+                    "attemptedat": datetime.utcnow(),
+                    "ipaddress": None  # Can be enhanced to capture IP later
                 }
             )
             conn.commit()
@@ -66,13 +67,14 @@ def login(request: LoginRequest):
         if not verify_password(request.password, stored_hash):
             conn.execute(
                 text("""
-                    INSERT INTO login_logs (emailused, success, attemptedat)
-                    VALUES (:email, :success, :attemptedat)
+                    INSERT INTO login_logs (emailused, success, attemptedat, ipaddress)
+                    VALUES (:email, :success, :attemptedat, :ipaddress)
                 """),
                 {
                     "email": request.email,
                     "success": False,
-                    "attemptedat": datetime.utcnow()
+                    "attemptedat": datetime.utcnow(),
+                    "ipaddress": None
                 }
             )
             conn.commit()
@@ -84,27 +86,28 @@ def login(request: LoginRequest):
         # save session
         conn.execute(
             text("""
-                INSERT INTO sessions (userid, token, expiresAt)
-                VALUES (:userid, :token, :expiresAt)
+                INSERT INTO sessions (userid, token, expiresat)
+                VALUES (:userid, :token, :expiresat)
             """),
             {
                 "userid": userid,
                 "token": token,
-                "expiresAt": expire_time
+                "expiresat": expire_time
             }
         )
 
         # log success
         conn.execute(
             text("""
-                INSERT INTO login_logs (userid, emailused, success, attemptedat)
-                VALUES (:userid, :email, :success, :attemptedat)
+                INSERT INTO login_logs (userid, emailused, success, attemptedat, ipaddress)
+                VALUES (:userid, :email, :success, :attemptedat, :ipaddress)
             """),
             {
                 "userid": userid,
                 "email": request.email,
                 "success": True,
-                "attemptedat": datetime.utcnow()
+                "attemptedat": datetime.utcnow(),
+                "ipaddress": None
             }
         )
 
