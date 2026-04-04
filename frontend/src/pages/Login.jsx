@@ -3,18 +3,77 @@ import { useState } from 'react'
 import { Mail, Lock, Eye, EyeOff, Instagram, Facebook, Linkedin } from 'lucide-react'
 import { motion } from "framer-motion"
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8001"
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 function Login() {
   const navigate = useNavigate()
-
-  const [role, setRole] = useState('student')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleLogin = () => {
-    navigate(`/${role}`)
+  const handleLogin = async () => {
+    setError('')
+
+    if (!email || !password) {
+      setError('Please enter both email and password.')
+      return
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.detail || "Login failed. Check your email and password.")
+        return
+      }
+
+      localStorage.setItem("token", data.access_token)
+
+      const userRes = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${data.access_token}`
+        }
+      })
+
+      const userData = await userRes.json()
+
+      if (!userRes.ok) {
+        setError(userData.detail || "Failed to fetch user profile.")
+        return
+      }
+
+      const currentUser = userData.user || userData
+      const role = currentUser?.role
+
+      localStorage.setItem("user", JSON.stringify(currentUser))
+
+      if (role === "admin") {
+        navigate("/admin")
+      } else if (role === "instructor") {
+        navigate("/instructor")
+      } else if (role === "student") {
+        navigate("/student")
+      } else {
+        setError("Your account role is not recognized.")
+      }
+
+    } catch (error) {
+      console.error(error)
+      setError("Something went wrong. Please try again.")
+    }
   }
-
   return (
 <div className="min-h-screen flex flex-col bg-[#D6CEDC] pt-24">
       {/* CENTER SECTION */}
@@ -49,20 +108,22 @@ function Login() {
             <div className="relative">
               <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
               <input
-                type="email"
-                placeholder="Email"
-                className="w-full pl-10 pr-4 py-3 border border-[#E0D8E6] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8E7DA5] transition"
-              />
+  type="email"
+  placeholder="Email"
+  onChange={(e) => setEmail(e.target.value)}
+  className="w-full pl-10 pr-4 py-3 border border-[#E0D8E6] rounded-lg ..."
+/>
             </div>
 
             {/* Password */}
             <div className="relative">
               <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                className="w-full pl-10 pr-10 py-3 border border-[#E0D8E6] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8E7DA5] transition"
-              />
+             <input
+  type={showPassword ? "text" : "password"}
+  placeholder="Password"
+  onChange={(e) => setPassword(e.target.value)}
+  className="w-full pl-10 pr-10 py-3 border border-[#E0D8E6] rounded-lg ..."
+/>
               <div
                 className="absolute right-3 top-3.5 cursor-pointer text-gray-500 hover:text-[#8E7DA5] transition"
                 onClick={() => setShowPassword(!showPassword)}
@@ -76,12 +137,14 @@ function Login() {
 
             <button
               onClick={handleLogin}
-              disabled={loading}
-              className={`w-full py-3 rounded-lg font-medium tracking-wide transition-all duration-300 ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#8E7DA5] hover:bg-[#7B6A96] hover:shadow-lg hover:scale-[1.02]'}`}
+              className="w-full bg-[#8E7DA5] text-white py-3 rounded-lg hover:bg-[#7B6A96] hover:shadow-lg hover:scale-[1.02] transition-all duration-300 font-medium tracking-wide"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              Sign In
             </button>
-<p className="text-sm text-center mt-4">
+            {error && (
+              <p className="mt-4 text-center text-sm text-red-600">{error}</p>
+            )}
+            <p className="text-sm text-center mt-4">
   <span className="text-gray-600">
     Forgot Password?{" "}
   </span>
