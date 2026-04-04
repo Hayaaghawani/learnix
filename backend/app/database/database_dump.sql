@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5MrRBaUnKdnL6GlfW6LncpNu3mACn9qdvUTIGjGhZhHhjUogWgCtwmtouYu161T
+\restrict VUOGmrtLn6uHPNiN5i1OdifYkwuTIWBjzotmi3oT5drXI3IV2ZugJc9XXcvdlcc
 
 -- Dumped from database version 18.3
 -- Dumped by pg_dump version 18.3
 
--- Started on 2026-03-18 00:46:27
+-- Started on 2026-04-04 20:47:42
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -468,6 +468,7 @@ COPY public.courses (courseid, coursename, description, languageused, startdate,
 df8a4bf7-00b6-4a6d-bad6-c9a10374a3ef	Python Basics	Intro to Python	Python	2026-03-01	2026-06-01	d0f41223-7984-4629-a5a0-bde1b809fc01
 e5f122e7-089e-42f9-96cf-ff05833891fa	Structured Programming	Learn Codding basics using C-language	C	2026-03-20	2026-06-20	d0f41223-7984-4629-a5a0-bde1b809fc01
 900a6bf1-2654-4a67-92cd-435fc3b2d08f	Data Structure	Learn Coding basics and Algorithms to enhance the problem-solving skill, using C language	C	2026-03-20	2026-06-20	d0f41223-7984-4629-a5a0-bde1b809fc01
+605f02ec-1ae9-4c58-b2b0-bbf823638c1e	Physics 101	Intro physics	Python	2026-05-01	2026-07-01	d0f41223-7984-4629-a5a0-bde1b809fc01
 \.
 
 
@@ -481,7 +482,6 @@ COPY public.enrollments (student_id, course_id) FROM stdin;
 326bb069-1a37-48fb-b236-2d54f9c0523a	df8a4bf7-00b6-4a6d-bad6-c9a10374a3ef
 326bb069-1a37-48fb-b236-2d54f9c0523a	e5f122e7-089e-42f9-96cf-ff05833891fa
 cfccef0a-d58d-47e4-b919-360f46ce6c76	df8a4bf7-00b6-4a6d-bad6-c9a10374a3ef
-7c18e252-e216-4054-845d-222e7c50e300	900a6bf1-2654-4a67-92cd-435fc3b2d08f
 \.
 
 
@@ -492,6 +492,7 @@ cfccef0a-d58d-47e4-b919-360f46ce6c76	df8a4bf7-00b6-4a6d-bad6-c9a10374a3ef
 --
 
 COPY public.executionsummary (summaryid, attemptid, runtimems, memorykb, stdout, stderr, passedcount, failedcount) FROM stdin;
+5dabeb14-f9df-4518-b29f-9a6f10ebfbae	bdb57242-a737-49ec-aa26-3a3b6cd50ace	120	2048	hello		3	1
 \.
 
 
@@ -503,6 +504,7 @@ COPY public.executionsummary (summaryid, attemptid, runtimems, memorykb, stdout,
 
 COPY public.exercise (exerciseid, courseid, userid, typeid, title, difficultylevel, exercisetype, keyconcept, prerequisites, problem, referencesolution, isactive, createdat, duedate, updatedat) FROM stdin;
 8b785b14-996c-4150-a347-20bf7a25691b	e5f122e7-089e-42f9-96cf-ff05833891fa	d0f41223-7984-4629-a5a0-bde1b809fc01	7f39d2ca-4339-4e43-9cf1-f91f7df65bfe	Loops Basics	beginner	Coding	For Loops	Variables, Conditions	Write a loop that prints numbers from 1 to 10	for(int i=1;i<=10;i++) print(i);	t	2026-03-17 23:41:31.06144	2026-03-24	2026-03-17 23:41:31.06144
+25e1390e-1940-47fa-9a0e-e8b4e0fe8e0a	e5f122e7-089e-42f9-96cf-ff05833891fa	d0f41223-7984-4629-a5a0-bde1b809fc01	7f39d2ca-4339-4e43-9cf1-f91f7df65bfe	Sorting Problem	Easy	Coding	Sorting	Arrays	Write a function that sorts an array.	Use Python sorted().	t	2026-03-29 22:31:20.873473	2026-06-01	\N
 \.
 
 
@@ -513,6 +515,9 @@ COPY public.exercise (exerciseid, courseid, userid, typeid, title, difficultylev
 --
 
 COPY public.exerciseattempt (attemptid, userid, exerciseid, reportid, attemptnumber, status, score, hintcount, submittedcode, passedtestcases) FROM stdin;
+bdb57242-a737-49ec-aa26-3a3b6cd50ace	326bb069-1a37-48fb-b236-2d54f9c0523a	8b785b14-996c-4150-a347-20bf7a25691b	37308d9a-86af-4a39-babf-b0abf06a902e	1	InProgress	0	0	print('hello world')	0
+7d546021-23ca-4ca5-90ac-77390ba263e7	326bb069-1a37-48fb-b236-2d54f9c0523a	8b785b14-996c-4150-a347-20bf7a25691b	37308d9a-86af-4a39-babf-b0abf06a902e	2	InProgress	0	0	print('hello world')	0
+3031e5b2-28a1-4f61-a92a-24bae84f20f2	326bb069-1a37-48fb-b236-2d54f9c0523a	8b785b14-996c-4150-a347-20bf7a25691b	37308d9a-86af-4a39-babf-b0abf06a902e	3	InProgress	0	0	print('hello world')	0
 \.
 
 
@@ -568,12 +573,24 @@ COPY public.instructorviewedreport (reportid, userid) FROM stdin;
 --
 
 COPY public.login_logs (logid, userid, emailused, success, ipaddress, attemptedat) FROM stdin;
-54cefe71-bbe9-4fdd-a54b-6576810990c2	\N	wrong@learnix.com	f	192.168.1.11	2026-03-03 23:22:30.592283
-b9c87d91-8999-4088-852b-8f1b7cd50f9b	\N	teststudent@learnix.com	t	192.168.1.10	2026-03-03 23:22:11.681184
-e2289be4-6441-486d-aecd-c6fbc161a5d4	\N	wrong@learnix.com	f	192.168.1.11	2026-03-03 23:28:24.758736
-19565af4-3edf-4fc1-a673-23766bac38ba	\N	alice@example.com	t	127.0.0.1	2026-03-04 17:20:57.936438
-d56c0cb8-c59d-4e2b-94c6-234b0c2a4531	\N	alice@example.com	t	127.0.0.1	2026-03-04 17:21:07.790506
-2b0c1282-b96f-4924-bab4-97493d449f79	\N	teststudent@learnix.com	t	192.168.1.10	2026-03-03 23:28:05.770754
+fdeb9311-b6fb-4536-9ca6-1d97c4ca661e	326bb069-1a37-48fb-b236-2d54f9c0523a	tala.doe@email.com	t	\N	2026-04-01 18:44:45.506117
+7179e353-7d8b-42cc-a450-3cfc36b4744c	326bb069-1a37-48fb-b236-2d54f9c0523a	tala.doe@email.com	t	\N	2026-04-02 11:17:16.745234
+6ee4ed3e-7fa7-4904-bb86-6edc1a1b96f2	326bb069-1a37-48fb-b236-2d54f9c0523a	tala.doe@email.com	t	\N	2026-04-02 13:01:55.088658
+cb27714a-2da9-4417-bef2-ac68656eb7fa	326bb069-1a37-48fb-b236-2d54f9c0523a	tala.doe@email.com	t	\N	2026-04-03 10:35:29.837657
+854a5a59-6a8f-42db-a466-f61719d3e25c	326bb069-1a37-48fb-b236-2d54f9c0523a	tala.doe@email.com	t	\N	2026-04-03 20:44:16.611193
+5c1b5b07-e11a-4042-a9a0-792397695996	\N	user@example.com	f	\N	2026-04-03 22:04:59.023583
+9f572d38-8b98-43dd-9a7d-4a0a8f65d4d5	326bb069-1a37-48fb-b236-2d54f9c0523a	tala.doe@email.com	t	\N	2026-04-04 17:00:22.146046
+ddeaec8f-1118-4b2d-9bb9-83d8c440546a	\N	Omar.osa@email.com	f	\N	2026-04-04 17:00:51.640697
+d836e1d4-10d4-4612-8a32-cb9b73b5d873	cfccef0a-d58d-47e4-b919-360f46ce6c76	Omar.osa@email.com	t	\N	2026-04-04 17:01:06.081719
+d3829030-1a3f-4b45-aa60-465ef7d52296	326bb069-1a37-48fb-b236-2d54f9c0523a	tala.doe@email.com	t	\N	2026-04-04 17:02:17.684352
+f7804edc-1965-4254-8338-c24e46b79454	d0f41223-7984-4629-a5a0-bde1b809fc01	anas.abu@example.com	t	\N	2026-04-04 17:02:38.846502
+acd0bafb-6f3e-42d1-9535-f9d86608d011	\N	hala.Alaghawani@example.com	f	\N	2026-04-04 17:03:44.486494
+08e063bf-63f4-4ced-add3-34424152d456	\N	Hala.Alaghawani@email.com	f	\N	2026-04-04 17:05:06.361812
+52c05316-d377-4ec2-9518-c309e9fcd69c	\N	hala.Alaghawani@example.com	f	\N	2026-04-04 17:10:21.922683
+a40d4321-d9ac-479b-a63f-3c457eec1adf	\N	hala.ess@example.com	f	\N	2026-04-04 17:10:46.351211
+eb0ea46d-9726-42a9-94bf-519c4747e023	\N	hala.ess@example.com	f	\N	2026-04-04 17:10:49.483527
+f8a518a5-178d-4069-878e-6926da3c7a24	9848392a-27fd-4c5a-aaf5-1e0c3ffea782	haya.ala@example.com	t	\N	2026-04-04 17:17:26.991358
+0bb7d7e8-ff56-4118-a1d7-e60123572b4c	3c78b71b-94bd-4ba7-9d72-ed1f5cd4d5d3	hala.ess@example.com	t	\N	2026-04-04 17:17:47.604818
 \.
 
 
@@ -604,6 +621,7 @@ COPY public.materialchunk (chunkid, materialid, courseid, embeddingvector, pagen
 --
 
 COPY public.notifications (notificationid, userid, title, message, isread, createdat) FROM stdin;
+59abaa20-e07e-439c-ae4d-f316320ae7a5	326bb069-1a37-48fb-b236-2d54f9c0523a	Answered!	No hints will be given	t	2026-03-28 19:10:39.270612
 \.
 
 
@@ -624,7 +642,6 @@ COPY public.readby (userid, attemptid) FROM stdin;
 --
 
 COPY public.sessions (sessionid, userid, token, createdat, expiresat) FROM stdin;
-9ec28a74-af33-463d-92c6-fe6d3ac84817	326bb069-1a37-48fb-b236-2d54f9c0523a	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIzMjZiYjA2OS0xYTM3LTQ4ZmItYjIzNi0yZDU0ZjljMDUyM2EiLCJleHAiOjE3NzM0MTM1MDh9.pswm37jSlILtjyfkuuZojGKjHL5M4efgtlREltleZRo	2026-03-13 16:51:47.967918	2026-03-13 14:51:48.182771
 \.
 
 
@@ -636,7 +653,6 @@ COPY public.sessions (sessionid, userid, token, createdat, expiresat) FROM stdin
 
 COPY public.student (userid, enrolledcoursecount) FROM stdin;
 326bb069-1a37-48fb-b236-2d54f9c0523a	2
-7c18e252-e216-4054-845d-222e7c50e300	1
 cfccef0a-d58d-47e4-b919-360f46ce6c76	1
 \.
 
@@ -648,6 +664,7 @@ cfccef0a-d58d-47e4-b919-360f46ce6c76	1
 --
 
 COPY public.studentreport (reportid, courseid, userid, completionrate, weaknesssummary, performancesummary, recommendations, createdat, lastupdated) FROM stdin;
+37308d9a-86af-4a39-babf-b0abf06a902e	e5f122e7-089e-42f9-96cf-ff05833891fa	326bb069-1a37-48fb-b236-2d54f9c0523a	0	\N	No attempts yet	Start solving exercises to build your report	2026-04-01	2026-04-01
 \.
 
 
@@ -691,10 +708,10 @@ b7b93072-38c8-4826-a207-f074c97427c4	8b785b14-996c-4150-a347-20bf7a25691b	3	1 2 
 
 COPY public.users (userid, firstname, lastname, email, password, role, isactive, createdat) FROM stdin;
 d0f41223-7984-4629-a5a0-bde1b809fc01	Anas	Abu Taleb	anas.abu@example.com	$2b$12$AjMrJ99Qw30lAZNSK1uG/ubsxrZmPoQRDEzfA9pQRCcVBri1I5eB2	instructor	t	2026-03-02 22:01:14.571465
-9f99614e-1538-45d4-b8aa-f6d9a38696ee	Haya	Alaghawani	hala.Alaghawani@example.com	$2b$12$nv3VFdsS7cxR.TnGilPAB.lfLGLOTps3ZLvzXKzCao5o0fjtVCsve	admin	t	2026-03-02 22:02:16.525667
 326bb069-1a37-48fb-b236-2d54f9c0523a	Tala	Doe	tala.doe@email.com	$2b$12$kd9H4DuWouAnylcgEkAGZOUNI4odX0IFqyca.vfPpIi3r3CzWQA1e	student	t	2026-03-10 23:36:48.370856
-7c18e252-e216-4054-845d-222e7c50e300	Hala	Essa	Hala.ess@email.com	$2b$12$CeXj0kMxDH21eln19oFCN.Gwei5hiTtZvNR1ge8.54IrjRCjT03km	student	t	2026-03-16 21:45:35.499662
-cfccef0a-d58d-47e4-b919-360f46ce6c76	Omar	Osama	Omar.osa@email.com	$2b$12$ivCR5reXr7whwFttRoGJ7OBXm5FcKz1UAqmOL/QXqAEYIIsNJRtvq	student	t	2026-03-16 21:46:18.373197
+cfccef0a-d58d-47e4-b919-360f46ce6c76	Omar	Osama	Omar.osa@email.com	$2b$12$OsfOAI7vFQWHQXYRdgotoOHPyh4OEW9QxKiz.bmI5d3CjAQ53jrZq	student	t	2026-03-16 21:46:18.373197
+3c78b71b-94bd-4ba7-9d72-ed1f5cd4d5d3	Hala	Essa	hala.ess@example.com	$2b$12$D4Q0zrzIQ2g4vv.hDfUmGuhsg7nR5fQ3m3zqVsueOM.2KQUDIFcla	student	t	2026-04-04 20:14:25.645107
+9848392a-27fd-4c5a-aaf5-1e0c3ffea782	haya	Alaghawani	haya.ala@example.com	$2b$12$57F45oby8lP.tbpK2zxe8.PUakAIZpYqWM5n4m789Ygk0YN4tlFt.	admin	t	2026-04-04 20:15:19.515268
 \.
 
 
@@ -1256,11 +1273,11 @@ ALTER TABLE ONLY public.studentweakness
     ADD CONSTRAINT fk_user_weakness FOREIGN KEY (userid) REFERENCES public.users(userid) ON DELETE CASCADE;
 
 
--- Completed on 2026-03-18 00:46:27
+-- Completed on 2026-04-04 20:47:42
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 5MrRBaUnKdnL6GlfW6LncpNu3mACn9qdvUTIGjGhZhHhjUogWgCtwmtouYu161T
+\unrestrict VUOGmrtLn6uHPNiN5i1OdifYkwuTIWBjzotmi3oT5drXI3IV2ZugJc9XXcvdlcc
 
