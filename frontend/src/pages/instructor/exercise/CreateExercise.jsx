@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { useState } from "react"
-import { Plus, Trash2, Send } from "lucide-react"
+import { Plus, Trash2, Send, Loader2 } from "lucide-react"
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 function CreateExercise() {
 
@@ -9,9 +11,12 @@ function CreateExercise() {
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [type, setType] = useState("training")
+  const [type, setType] = useState("beginner")
+  const [difficulty, setDifficulty] = useState("Easy")
   const [solution, setSolution] = useState("")
-  const [aiMode, setAiMode] = useState("default")
+  const [dueDate, setDueDate] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const [testCases, setTestCases] = useState([
     { input: "", output: "" },
@@ -23,31 +28,6 @@ function CreateExercise() {
   ])
 
   const [chatInput, setChatInput] = useState("")
-
-
-
-  /* ---------------- TEST CASE HANDLING ---------------- */
-
-  const updateTestCase = (index, field, value) => {
-    const updated = [...testCases]
-    updated[index][field] = value
-    setTestCases(updated)
-  }
-
-  const addTestCase = () => {
-    setTestCases([...testCases, { input: "", output: "" }])
-  }
-
-  const removeTestCase = (index) => {
-
-    if (testCases.length <= 2) {
-      alert("Minimum 2 test cases required")
-      return
-    }
-
-    const updated = testCases.filter((_, i) => i !== index)
-    setTestCases(updated)
-  }
 
 
 
@@ -83,52 +63,81 @@ function CreateExercise() {
 
   /* ---------------- SAVE EXERCISE ---------------- */
 
-  const saveExercise = () => {
-
+  const saveExercise = async () => {
     if (!title.trim()) {
-      alert("Exercise title required")
+      setError("Exercise title is required")
       return
     }
 
-    if (testCases.length < 2) {
-      alert("At least 2 test cases required")
+    if (!description.trim()) {
+      setError("Exercise description is required")
       return
     }
 
-    const courses = JSON.parse(localStorage.getItem("courses")) || []
-
-    if (!courses[id]) {
-      alert("Course not found")
+    if (!dueDate) {
+      setError("Due date is required")
       return
     }
 
-    if (!courses[id].exercises) {
-      courses[id].exercises = []
+    setLoading(true)
+    setError("")
+
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("No authentication token found")
+        setLoading(false)
+        return
+      }
+
+      // Use a default typeId for now (Beginner type from database dump)
+      const typeId = "7f39d2ca-4339-4e43-9cf1-f91f7df65bfe"
+
+      const response = await fetch(`${API_BASE_URL}/exercises/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          courseId: id,
+          typeId: typeId,
+          title: title.trim(),
+          difficultyLevel: difficulty,
+          exerciseType: type,
+          keyConcept: description.trim(),
+          problem: description.trim(),
+          referenceSolution: solution.trim() || null,
+          dueDate: dueDate
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `Failed to create exercise: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      // Reset form
+      setTitle("")
+      setDescription("")
+      setSolution("")
+      setDueDate("")
+      setTestCases([
+        { input: "", output: "" },
+        { input: "", output: "" }
+      ])
+
+      // Navigate back to exercises list
+      navigate(`/instructor/course/${id}/exercises`)
+
+    } catch (error) {
+      console.error("Error creating exercise:", error)
+      setError(error.message || "Failed to create exercise. Please try again.")
+    } finally {
+      setLoading(false)
     }
-
-    const newExercise = {
-      title,
-      description,
-      type,
-      solution,
-      aiMode,
-      testCases
-    }
-
-    courses[id].exercises.push(newExercise)
-
-    localStorage.setItem("courses", JSON.stringify(courses))
-
-    // reset form
-    setTitle("")
-    setDescription("")
-    setSolution("")
-    setTestCases([
-      { input: "", output: "" },
-      { input: "", output: "" }
-    ])
-
-    navigate(`/instructor/course/${id}/exercises`)
   }
 
 
@@ -182,97 +191,79 @@ function CreateExercise() {
             onChange={(e) => setType(e.target.value)}
             className="border p-3 rounded-lg w-full"
           >
-            <option value="training">Training</option>
-            <option value="assignment">Assignment</option>
-            <option value="midterm">Midterm Prep</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="senior">Senior</option>
+            <option value="professional">Professional</option>
           </select>
         </div>
 
+        {/* Difficulty Level */}
+
+        <div>
+          <label className="font-medium block mb-2">Difficulty Level</label>
+
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="border p-3 rounded-lg w-full"
+          >
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+        </div>
+
+        {/* Due Date */}
+
+        <div>
+          <label className="font-medium block mb-2">Due Date</label>
+
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="border p-3 rounded-lg w-full"
+          />
+        </div>
 
         {/* Canonical Solution */}
 
         <div>
-          <label className="font-medium block mb-2">Canonical Solution</label>
+          <label className="font-medium block mb-2">Canonical Solution (Optional)</label>
 
           <textarea
             value={solution}
             onChange={(e) => setSolution(e.target.value)}
             className="w-full border p-3 rounded-lg"
+            rows={4}
           />
         </div>
 
-
-        {/* AI Mode */}
-
-        <div>
-          <label className="font-medium block mb-2">AI Mode</label>
-
-          <select
-            value={aiMode}
-            onChange={(e) => setAiMode(e.target.value)}
-            className="border p-3 rounded-lg w-full"
-          >
-            <option value="default">Default Mode</option>
-            <option value="custom">Custom Mode</option>
-          </select>
-        </div>
-
-
-        {/* Test Cases */}
-
-        <div>
-
-          <label className="font-medium block mb-3">Test Cases</label>
-
-          {testCases.map((test, index) => (
-
-            <div key={index} className="flex gap-4 mb-3">
-
-              <input
-                placeholder="Input"
-                value={test.input}
-                onChange={(e) =>
-                  updateTestCase(index, "input", e.target.value)
-                }
-                className="border p-2 rounded w-full"
-              />
-
-              <input
-                placeholder="Output"
-                value={test.output}
-                onChange={(e) =>
-                  updateTestCase(index, "output", e.target.value)
-                }
-                className="border p-2 rounded w-full"
-              />
-
-              <Trash2
-                className="text-red-500 cursor-pointer"
-                onClick={() => removeTestCase(index)}
-              />
-
-            </div>
-
-          ))}
-
-          <button
-            onClick={addTestCase}
-            className="flex items-center gap-2 text-[#6E5C86]"
-          >
-            <Plus size={16}/>
-            Add Test Case
-          </button>
-
-        </div>
-
+        {error && (
+          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
 
         {/* Save Button */}
 
         <button
           onClick={saveExercise}
-          className="bg-[#8E7DA5] text-white px-6 py-3 rounded-lg"
+          disabled={loading}
+          className="w-full bg-[#8E7DA5] text-white py-3 rounded-lg hover:bg-[#7B6A96] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          Save Exercise
+          {loading ? (
+            <>
+              <Loader2 className="animate-spin" size={18} />
+              Creating Exercise...
+            </>
+          ) : (
+            <>
+              <Plus size={18} />
+              Create Exercise
+            </>
+          )}
         </button>
 
       </div>

@@ -155,3 +155,41 @@ def create_course(
         "message": "Course created successfully",
         "courseId": str(new_course[0])
     }
+
+
+# DELETE COURSE (INSTRUCTOR OR ADMIN)
+@router.delete("/{course_id}")
+def delete_course(
+    course_id: str,
+    current_user: dict = Depends(require_role(["instructor", "admin"]))
+):
+    with engine.connect() as conn:
+        # Check if course exists
+        course = conn.execute(
+            text("""
+                SELECT instructorid
+                FROM courses
+                WHERE courseid = :course_id
+            """),
+            {"course_id": course_id}
+        ).fetchone()
+
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        # Check authorization: only course owner or admin can delete
+        instructor_id = course[0]
+        if current_user["role"] == "instructor" and str(instructor_id) != str(current_user["userid"]):
+            raise HTTPException(status_code=403, detail="Not allowed to delete this course")
+
+        # Delete course (cascading deletes should handle exercises, enrollments, etc.)
+        conn.execute(
+            text("DELETE FROM courses WHERE courseid = :course_id"),
+            {"course_id": course_id}
+        )
+        conn.commit()
+
+    return {
+        "message": "Course deleted successfully",
+        "courseId": course_id
+    }

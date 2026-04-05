@@ -1,32 +1,79 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
-import { Plus } from "lucide-react"
+import { Plus, Loader2 } from "lucide-react"
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 function CourseExercises() {
 
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const [course, setCourse] = useState(null)
+  const [exercises, setExercises] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-
-    const courses = JSON.parse(localStorage.getItem("courses")) || []
-    const selectedCourse = courses[id]
-
-    if (!selectedCourse.exercises) {
-      selectedCourse.exercises = []
-    }
-
-    setCourse(selectedCourse)
-
+    fetchExercises()
   }, [id])
 
-  if (!course) return <div className="p-10">Loading...</div>
+  const fetchExercises = async () => {
+    setLoading(true)
+    setError('')
 
-  const trainingExercises = course.exercises.filter(e => e.type === "training")
-  const assignmentExercises = course.exercises.filter(e => e.type === "assignment")
-  const midtermExercises = course.exercises.filter(e => e.type === "midterm")
+    console.log('Fetching exercises for course ID:', id)
+
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("No authentication token found")
+        setLoading(false)
+        return
+      }
+
+      console.log('Using token:', token.substring(0, 20) + '...')
+
+      const response = await fetch(`${API_BASE_URL}/exercises/course/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      console.log('Response status:', response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.log('Error response:', errorText)
+        throw new Error(`Failed to fetch exercises: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log('Received exercises:', data)
+      setExercises(data.exercises || [])
+    } catch (error) {
+      console.error("Error fetching exercises:", error)
+      setError("Failed to load exercises. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const beginnerExercises = exercises.filter(e => {
+    const type = (e.exerciseType || "").toLowerCase()
+    return type.includes("training") || type.includes("coding") || type.includes("beginner")
+  })
+  const intermediateExercises = exercises.filter(e => {
+    const type = (e.exerciseType || "").toLowerCase()
+    return type.includes("assignment") || type.includes("project") || type.includes("intermediate")
+  })
+  const seniorExercises = exercises.filter(e => {
+    const type = (e.exerciseType || "").toLowerCase()
+    return type.includes("midterm") || type.includes("exam") || type.includes("senior")
+  })
+  const professionalExercises = exercises.filter(e => {
+    const type = (e.exerciseType || "").toLowerCase()
+    return type.includes("professional") || type.includes("advanced") || type.includes("expert")
+  })
 
   return (
 
@@ -50,114 +97,189 @@ function CourseExercises() {
 
       </div>
 
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="animate-spin text-[#8E7DA5]" size={32} />
+          <span className="ml-2 text-gray-600">Loading exercises...</span>
+        </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {error}
+          <button
+            onClick={fetchExercises}
+            className="ml-2 underline hover:no-underline"
+          >
+            Try again
+          </button>
+        </div>
+      ) : (
 
-      {/* Exercise Columns */}
+        <div className="grid grid-cols-3 gap-6">
 
-      <div className="grid grid-cols-3 gap-6">
+          {/* BEGINNER */}
+
+          <div className="bg-white p-6 rounded-xl shadow">
+
+            <h2 className="font-semibold mb-4 text-[#6E5C86]">
+              BEGINNER
+            </h2>
+
+            {beginnerExercises.length === 0 ? (
+              <p className="text-gray-400 text-sm">No exercises yet</p>
+            ) : (
+              beginnerExercises.map((exercise) => (
+                <div
+                  key={exercise.exerciseId}
+                  className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm cursor-pointer hover:bg-gray-100 transition"
+                  onClick={() => navigate(`/exercise/${exercise.exerciseId}/workspace`)}
+                >
+
+                  <h3 className="font-medium">
+                    {exercise.title}
+                  </h3>
+
+                  <p className="text-sm text-gray-500 mt-1">
+                    {exercise.keyConcept || "No description"}
+                  </p>
+
+                  <div className="flex justify-between text-xs text-gray-400 mt-2">
+                    <span>Difficulty: {exercise.difficultyLevel}</span>
+                    <span>Due: {new Date(exercise.dueDate).toLocaleDateString()}</span>
+                  </div>
+
+                </div>
+              ))
+            )}
+
+          </div>
 
 
-        {/* TRAINING */}
 
-        <div className="bg-white p-6 rounded-xl shadow">
+          {/* INTERMEDIATE */}
 
-          <h2 className="font-semibold mb-4 text-[#6E5C86]">
-            TRAINING MODE
-          </h2>
+          <div className="bg-white p-6 rounded-xl shadow">
 
-          {trainingExercises.length === 0 ? (
-            <p className="text-gray-400 text-sm">No exercises yet</p>
-          ) : (
-            trainingExercises.map((exercise, i) => (
-              <div
-                key={i}
-                className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm"
-              >
+            <h2 className="font-semibold mb-4 text-[#6E5C86]">
+              INTERMEDIATE
+            </h2>
 
-                <h3 className="font-medium">
-                  {exercise.title}
-                </h3>
+            {intermediateExercises.length === 0 ? (
+              <p className="text-gray-400 text-sm">No exercises yet</p>
+            ) : (
+              intermediateExercises.map((exercise) => (
+                <div
+                  key={exercise.exerciseId}
+                  className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm cursor-pointer hover:bg-gray-100 transition"
+                  onClick={() => navigate(`/exercise/${exercise.exerciseId}/workspace`)}
+                >
 
-                <p className="text-sm text-gray-500">
-                  {exercise.description}
-                </p>
+                  <h3 className="font-medium">
+                    {exercise.title}
+                  </h3>
 
-              </div>
-            ))
-          )}
+                  <p className="text-sm text-gray-500 mt-1">
+                    {exercise.keyConcept || "No description"}
+                  </p>
+
+                  <div className="flex justify-between text-xs text-gray-400 mt-2">
+                    <span>Difficulty: {exercise.difficultyLevel}</span>
+                    <span>Due: {new Date(exercise.dueDate).toLocaleDateString()}</span>
+                  </div>
+
+                </div>
+              ))
+            )}
+
+          </div>
+
+
+
+          {/* SENIOR */}
+
+          <div className="bg-white p-6 rounded-xl shadow">
+
+            <h2 className="font-semibold mb-4 text-[#6E5C86]">
+              SENIOR
+            </h2>
+
+            {seniorExercises.length === 0 ? (
+              <p className="text-gray-400 text-sm">
+                No exercises yet
+              </p>
+            ) : (
+              seniorExercises.map((exercise) => (
+                <div
+                  key={exercise.exerciseId}
+                  className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm cursor-pointer hover:bg-gray-100 transition"
+                  onClick={() => navigate(`/exercise/${exercise.exerciseId}/workspace`)}
+                >
+
+                  <h3 className="font-medium">
+                    {exercise.title}
+                  </h3>
+
+                  <p className="text-sm text-gray-500 mt-1">
+                    {exercise.keyConcept || "No description"}
+                  </p>
+
+                  <div className="flex justify-between text-xs text-gray-400 mt-2">
+                    <span>Difficulty: {exercise.difficultyLevel}</span>
+                    <span>Due: {new Date(exercise.dueDate).toLocaleDateString()}</span>
+                  </div>
+
+                </div>
+              ))
+            )}
+
+          </div>
+
+
+
+          {/* PROFESSIONAL */}
+
+          <div className="bg-white p-6 rounded-xl shadow">
+
+            <h2 className="font-semibold mb-4 text-[#6E5C86]">
+              PROFESSIONAL
+            </h2>
+
+            {professionalExercises.length === 0 ? (
+              <p className="text-gray-400 text-sm">
+                No exercises yet
+              </p>
+            ) : (
+              professionalExercises.map((exercise) => (
+                <div
+                  key={exercise.exerciseId}
+                  className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm cursor-pointer hover:bg-gray-100 transition"
+                  onClick={() => navigate(`/exercise/${exercise.exerciseId}/workspace`)}
+                >
+
+                  <h3 className="font-medium">
+                    {exercise.title}
+                  </h3>
+
+                  <p className="text-sm text-gray-500 mt-1">
+                    {exercise.keyConcept || "No description"}
+                  </p>
+
+                  <div className="flex justify-between text-xs text-gray-400 mt-2">
+                    <span>Difficulty: {exercise.difficultyLevel}</span>
+                    <span>Due: {new Date(exercise.dueDate).toLocaleDateString()}</span>
+                  </div>
+
+                </div>
+              ))
+            )}
+
+          </div>
 
         </div>
 
-
-
-        {/* ASSIGNMENT */}
-
-        <div className="bg-white p-6 rounded-xl shadow">
-
-          <h2 className="font-semibold mb-4 text-[#6E5C86]">
-            GRADED ASSIGNMENT
-          </h2>
-
-          {assignmentExercises.length === 0 ? (
-            <p className="text-gray-400 text-sm">No exercises yet</p>
-          ) : (
-            assignmentExercises.map((exercise, i) => (
-              <div
-                key={i}
-                className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm"
-              >
-
-                <h3 className="font-medium">
-                  {exercise.title}
-                </h3>
-
-                <p className="text-sm text-gray-500">
-                  {exercise.description}
-                </p>
-
-              </div>
-            ))
-          )}
-
-        </div>
-
-
-
-        {/* MIDTERM */}
-
-        <div className="bg-white p-6 rounded-xl shadow">
-
-          <h2 className="font-semibold mb-4 text-[#6E5C86]">
-            MIDTERM PREP
-          </h2>
-
-          {midtermExercises.length === 0 ? (
-            <p className="text-gray-400 text-sm">
-              Drag exercises here
-            </p>
-          ) : (
-            midtermExercises.map((exercise, i) => (
-              <div
-                key={i}
-                className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm"
-              >
-
-                <h3 className="font-medium">
-                  {exercise.title}
-                </h3>
-
-                <p className="text-sm text-gray-500">
-                  {exercise.description}
-                </p>
-
-              </div>
-            ))
-          )}
-
-        </div>
-
-      </div>
+      )}
 
     </div>
+
   )
 }
 

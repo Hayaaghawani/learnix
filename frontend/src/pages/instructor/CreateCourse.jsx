@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+
 function CreateCourse() {
 
   const navigate = useNavigate()
@@ -13,6 +15,9 @@ function CreateCourse() {
     semester: "",
     credits: "",
     department: "",
+    languageUsed: "",
+    startDate: "",
+    endDate: "",
     students: "",
     prerequisites: "",
     description: "",
@@ -58,7 +63,7 @@ function CreateCourse() {
     return total === 100
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
 
     if (
       !course.name ||
@@ -66,6 +71,9 @@ function CreateCourse() {
       !course.semester ||
       !course.credits ||
       !course.department ||
+      !course.languageUsed ||
+      !course.startDate ||
+      !course.endDate ||
       !course.students
     ) {
       setError("Please fill all required fields")
@@ -77,17 +85,39 @@ function CreateCourse() {
       return
     }
 
-    const existingCourses =
-      JSON.parse(localStorage.getItem("courses")) || []
+    const token = localStorage.getItem("token")
+    if (!token) {
+      setError("You must be logged in to create a course")
+      return
+    }
 
-    existingCourses.push({
-      ...course,
-      gradingType
-    })
+    try {
+      const response = await fetch(`${API_BASE_URL}/courses/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          courseName: course.name,
+          description: course.description,
+          languageUsed: course.languageUsed,
+          startDate: course.startDate,
+          endDate: course.endDate
+        })
+      })
 
-    localStorage.setItem("courses", JSON.stringify(existingCourses))
+      if (!response.ok) {
+        const errorData = await response.json()
+        setError(errorData.detail || "Failed to create course")
+        return
+      }
 
-    navigate("/instructor")
+      navigate("/instructor")
+    } catch (err) {
+      console.error(err)
+      setError("Failed to create course. Please try again.")
+    }
   }
 
   return (
@@ -130,12 +160,33 @@ function CreateCourse() {
               className="border p-2 rounded"
               onChange={handleChange}/>
 
+            <input required name="languageUsed"
+              placeholder="Course Language"
+              className="border p-2 rounded"
+              onChange={handleChange}/>
+
             <input required name="students" type="number"
               placeholder="Max Students"
               className="border p-2 rounded"
               onChange={handleChange}/>
 
           </div>
+
+          <input
+            name="startDate"
+            type="date"
+            placeholder="Start Date"
+            className="border p-2 rounded w-full mt-4"
+            onChange={handleChange}
+          />
+
+          <input
+            name="endDate"
+            type="date"
+            placeholder="End Date"
+            className="border p-2 rounded w-full mt-4"
+            onChange={handleChange}
+          />
 
           <input
             name="prerequisites"

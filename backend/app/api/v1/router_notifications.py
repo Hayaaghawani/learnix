@@ -76,3 +76,43 @@ def mark_notification_as_read(
         "message": "Notification marked as read",
         "notificationId": notification_id
     }
+
+
+#delete notification from database
+@router.delete("/{notification_id}")
+def delete_notification(
+    notification_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    with engine.connect() as conn:
+        notification = conn.execute(
+            text("""
+                SELECT notificationid, userid
+                FROM notifications
+                WHERE notificationid = :notification_id
+            """),
+            {"notification_id": notification_id}
+        ).fetchone()
+
+        if not notification:
+            raise HTTPException(status_code=404, detail="Notification not found")
+
+        # Prevent user from deleting someone else's notification
+        if str(notification[1]) != str(current_user["userid"]):
+            raise HTTPException(status_code=403, detail="Not allowed to delete this notification")
+
+        #Delete from database
+        conn.execute(
+            text("""
+                DELETE FROM notifications
+                WHERE notificationid = :notification_id
+            """),
+            {"notification_id": notification_id}
+        )
+        conn.commit()
+
+    #Return success
+    return {
+        "message": "Notification deleted successfully",
+        "notificationId": notification_id
+    }

@@ -13,6 +13,7 @@ import StudentReport from "./pages/student/StudentReport"
 
 import CreateCourse from "./pages/instructor/CreateCourse"
 import CreateExercise from "./pages/instructor/exercise/CreateExercise"
+import Notifications from "./pages/instructor/Notifications"
 
 import CourseLayout from "./pages/instructor/course/CourseLayout"
 import CourseExercises from "./pages/instructor/course/CourseExercises"
@@ -47,6 +48,7 @@ function App() {
         {/* Instructor Dashboard */}
         <Route path="/instructor" element={<InstructorDashboard />} />
         <Route path="/instructor/create-course" element={<CreateCourse />} />
+        <Route path="/instructor/notifications" element={<Notifications />} />
 
         {/* Create Exercise Page */}
         <Route path="/instructor/exercise/create/:id" element={<CreateExercise />} />

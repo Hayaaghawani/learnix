@@ -1,19 +1,52 @@
 import { Outlet, useParams, NavLink, useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+
 function CourseLayout() {
 
   const { id } = useParams()
   const navigate = useNavigate()
 
   const [course, setCourse] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-
-    const courses = JSON.parse(localStorage.getItem("courses")) || []
-    setCourse(courses[id])
-
+    fetchCourse()
   }, [id])
+
+  const fetchCourse = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("No authentication token found")
+        setLoading(false)
+        return
+      }
+
+      const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch course: ${response.status}`)
+      }
+
+      const courseData = await response.json()
+      setCourse(courseData)
+    } catch (error) {
+      console.error("Error fetching course:", error)
+      setError("Failed to load course details")
+    } finally {
+      setLoading(false)
+    }
+  }
 
 
   const linkStyle =
@@ -98,7 +131,25 @@ function CourseLayout() {
 
         {/* COURSE HEADER */}
 
-        {course && (
+        {loading ? (
+          <div className="bg-white p-6 rounded-xl shadow mb-8">
+            <div className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-8">
+            {error}
+            <button
+              onClick={fetchCourse}
+              className="ml-2 underline hover:no-underline"
+            >
+              Try again
+            </button>
+          </div>
+        ) : course ? (
 
           <div className="bg-white p-6 rounded-xl shadow mb-8">
 
@@ -116,7 +167,7 @@ function CourseLayout() {
               {" > "}
 
               <span className="text-gray-700 font-medium">
-                {course.code}
+                {course.courseName}
               </span>
 
             </div>
@@ -126,19 +177,19 @@ function CourseLayout() {
 
             <h1 className="text-2xl font-semibold text-[#3e2764]">
 
-              {course.name}
+              {course.courseName}
 
             </h1>
 
             <p className="text-gray-500 mt-1">
 
-              {course.students?.length || 0} Students • {course.exercises?.length || 0} Exercises
+              {course.languageUsed} • {new Date(course.startDate).toLocaleDateString()} - {new Date(course.endDate).toLocaleDateString()}
 
             </p>
 
           </div>
 
-        )}
+        ) : null}
 
         {/* PAGE CONTENT */}
 

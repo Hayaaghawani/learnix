@@ -14,7 +14,8 @@ from app.api.v1 import (
 # Haya's RAG stack - updated imports
 from app.services.rag.llm_service import RAGService
 from app.services.rag.pedagogical_controller import PedagogicalController
-
+#tala's endpoints for attempts 
+from app.api import attempts
 
 # ── App init ────────────────────────────────────────────────
 app = FastAPI()
@@ -25,8 +26,9 @@ app.include_router(auth_router)
 app.include_router(notifications_router)
 app.include_router(courses_router)
 app.include_router(exercises_router)
+app.include_router(attempts.router)
 #app.include_router(users_router)
-#app.include_router(admin_router)
+app.include_router(admin_router)
 
 app.add_middleware(
     CORSMiddleware,
