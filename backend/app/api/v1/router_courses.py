@@ -193,3 +193,74 @@ def delete_course(
         "message": "Course deleted successfully",
         "courseId": course_id
     }
+
+
+
+
+## get enrolled students
+@router.get("/{course_id}/students")
+def get_course_students(
+    course_id: str,
+    current_user: dict = Depends(require_role(["instructor", "admin"]))
+):
+    with engine.connect() as conn:
+        # if instructor, make sure they own the course
+        if current_user["role"] == "instructor":
+            course = conn.execute(
+                text("""
+                    SELECT courseid, instructorid, coursename
+                    FROM courses
+                    WHERE courseid = :course_id
+                """),
+                {"course_id": course_id}
+            ).fetchone()
+
+            if not course:
+                raise HTTPException(status_code=404, detail="Course not found")
+
+            if str(course[1]) != str(current_user["userid"]):
+                raise HTTPException(status_code=403, detail="Not allowed to access this course")
+
+            course_name = course[2]
+
+        else:
+            course = conn.execute(
+                text("""
+                    SELECT courseid, instructorid, coursename
+                    FROM courses
+                    WHERE courseid = :course_id
+                """),
+                {"course_id": course_id}
+            ).fetchone()
+
+            if not course:
+                raise HTTPException(status_code=404, detail="Course not found")
+
+            course_name = course[2]
+
+        # get enrolled students
+        result = conn.execute(
+            text("""
+                SELECT u.userid, u.firstname, u.lastname, u.email
+                FROM enrollments e
+                JOIN users u ON e.student_id = u.userid
+                WHERE e.course_id = :course_id
+                ORDER BY u.firstname, u.lastname, u.email
+            """),
+            {"course_id": course_id}
+        ).fetchall()
+
+    students = []
+    for row in result:
+        students.append({
+            "studentId": str(row[0]),
+            "name": f"{row[1]} {row[2]}".strip(),
+            "email": row[3]
+        })
+
+    return {
+        "courseId": course_id,
+        "courseName": course_name,
+        "count": len(students),
+        "students": students
+    }
