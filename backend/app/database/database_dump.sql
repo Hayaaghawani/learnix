@@ -296,6 +296,7 @@ ALTER TABLE public.materialchunk OWNER TO postgres;
 CREATE TABLE public.notifications (
     notificationid uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     userid uuid NOT NULL,
+    senderid uuid NOT NULL,
     title character varying(100) NOT NULL,
     message text NOT NULL,
     isread boolean DEFAULT false,

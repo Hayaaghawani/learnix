@@ -1,4 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
+import { Bell } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
@@ -7,6 +8,17 @@ function Navbar() {
   const location = useLocation()
 
   const isLoggedIn = Boolean(localStorage.getItem("token"))
+  const userData = localStorage.getItem("user")
+  let userRole = null
+
+  if (userData) {
+    try {
+      const parsed = JSON.parse(userData)
+      userRole = parsed.role
+    } catch (e) {
+      console.error("Error parsing user data:", e)
+    }
+  }
 
   const handleLogout = async () => {
     const token = localStorage.getItem("token")
@@ -29,6 +41,17 @@ function Navbar() {
       navigate("/")
     }
   }
+
+  const getNotificationsPath = () => {
+    if (userRole === "student") {
+      return "/student/notifications"
+    } else if (userRole === "instructor") {
+      return "/instructor/notifications"
+    }
+    return null
+  }
+
+  const notificationsPath = getNotificationsPath()
 
   return (
    <header className="sticky top-0 left-0 w-full z-50 bg-[#8E7AAE]">
@@ -76,6 +99,17 @@ function Navbar() {
           >
             Privacy
           </NavLink>
+
+          {isLoggedIn && location.pathname !== "/" && notificationsPath && (
+            <button
+              onClick={() => navigate(notificationsPath)}
+              className="flex items-center gap-2 hover:text-[#3e2764] transition relative"
+              title="Messages"
+            >
+              <Bell size={20} />
+              <span>Messages</span>
+            </button>
+          )}
 
           {isLoggedIn && location.pathname !== "/" && (
             <button
