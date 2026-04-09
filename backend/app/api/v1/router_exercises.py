@@ -7,6 +7,9 @@ import uuid
 
 router = APIRouter(prefix="/exercises", tags=["Exercises"])
 
+class TestCaseCreate(BaseModel):
+    input: str | None = None
+    expectedOutput: str
 
 class ExerciseCreate(BaseModel):
     courseId: str
@@ -19,6 +22,7 @@ class ExerciseCreate(BaseModel):
     problem: str
     referenceSolution: str | None = None
     dueDate: str
+    testCases: list[TestCaseCreate] = []
 
 #Get exercises for a course
 @router.get("/course/{course_id}")
@@ -231,8 +235,25 @@ def create_exercise(
             }
         ).fetchone()
 
-        conn.commit()
 
+
+        # Save test cases
+        for tc in request.testCases:
+            conn.execute(
+                text("""
+                    INSERT INTO testcases (testcaseid, exerciseid, input, expectedoutput, weight)
+                    VALUES (:testcaseid, :exerciseid, :input, :expectedoutput, :weight)
+                """),
+                {
+                    "testcaseid": str(uuid.uuid4()),
+                    "exerciseid": str(new_exercise[0]),
+                    "input": tc.input or "",
+                    "expectedoutput": tc.expectedOutput,
+                    "weight": 1.0
+                }
+            )
+        conn.commit()
+        
     return {
         "message": "Exercise created successfully",
         "exerciseId": str(new_exercise[0])

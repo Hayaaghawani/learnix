@@ -183,7 +183,7 @@ function InstructorDashboard() {
                     <h3 className="text-lg font-semibold">
                       {course.courseName}
                     </h3>
-                    <p className="text-xs text-gray-400 mt-1">ID: {course.courseId}</p>
+                    
                     {instructorUsername && (
                       <p className="text-xs text-gray-400 mt-1 break-all">
                         Join Code: {`${instructorUsername}${course.courseId}`}

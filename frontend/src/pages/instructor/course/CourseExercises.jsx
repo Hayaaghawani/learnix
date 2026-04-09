@@ -58,23 +58,19 @@ function CourseExercises() {
     }
   }
 
-  const beginnerExercises = exercises.filter(e => {
-    const type = (e.exerciseType || "").toLowerCase()
-    return type.includes("training") || type.includes("coding") || type.includes("beginner")
-  })
-  const intermediateExercises = exercises.filter(e => {
-    const type = (e.exerciseType || "").toLowerCase()
-    return type.includes("assignment") || type.includes("project") || type.includes("intermediate")
-  })
-  const seniorExercises = exercises.filter(e => {
-    const type = (e.exerciseType || "").toLowerCase()
-    return type.includes("midterm") || type.includes("exam") || type.includes("senior")
-  })
-  const professionalExercises = exercises.filter(e => {
-    const type = (e.exerciseType || "").toLowerCase()
-    return type.includes("professional") || type.includes("advanced") || type.includes("expert")
-  })
-
+// Replace the 4 filter blocks with these:
+const beginnerExercises = exercises.filter(e =>
+  (e.exerciseType || "").toLowerCase() === "beginner"
+)
+const intermediateExercises = exercises.filter(e =>
+  (e.exerciseType || "").toLowerCase() === "intermediate"
+)
+const seniorExercises = exercises.filter(e =>
+  (e.exerciseType || "").toLowerCase() === "senior"
+)
+const professionalExercises = exercises.filter(e =>
+  (e.exerciseType || "").toLowerCase() === "professional"
+)
   return (
 
     <div className="min-h-screen bg-[#F4F1F7] px-10 py-10">
