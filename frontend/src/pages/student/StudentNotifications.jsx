@@ -12,6 +12,13 @@ function StudentNotifications() {
 
   useEffect(() => {
     fetchNotifications()
+
+    // Refresh notifications every 5 seconds to catch new messages
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [])
 
   const fetchNotifications = async () => {
@@ -26,17 +33,21 @@ function StudentNotifications() {
         return
       }
 
+      console.log("Student fetching notifications...")
       const response = await fetch(`${API_BASE_URL}/notifications/my`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
 
+      console.log("Student notifications response status:", response.status)
+
       if (!response.ok) {
         throw new Error(`Failed to fetch notifications: ${response.status}`)
       }
 
       const data = await response.json()
+      console.log("Student received notifications:", data)
       setNotifications(data.notifications || [])
     } catch (error) {
       console.error("Error fetching notifications:", error)

@@ -15,6 +15,8 @@ class SendNotificationRequest(BaseModel):
 @router.get("/my")
 #Get my notifications
 def get_my_notifications(current_user: dict = Depends(get_current_user)):
+    print(f"Getting notifications for user: {current_user['userid']} (email: {current_user.get('email', 'unknown')})")
+
     with engine.connect() as conn:
         result = conn.execute(
             text("""
@@ -27,6 +29,8 @@ def get_my_notifications(current_user: dict = Depends(get_current_user)):
             """),
             {"userid": current_user["userid"]}
         ).fetchall()
+
+    print(f"Found {len(result)} notifications for user {current_user['userid']}")
 
     notifications = []
     for row in result:
@@ -59,39 +63,52 @@ def send_notification(
     if current_user.get("role") != "instructor":
         raise HTTPException(status_code=403, detail="Only instructors can send notifications")
 
-    with engine.connect() as conn:
-        # Find the student by email
-        student = conn.execute(
-            text("""
-                SELECT userid, email, role
-                FROM users
-                WHERE email = :email AND role = 'student'
-            """),
-            {"email": request.recipientEmail}
-        ).fetchone()
+    try:
+        print(f"Instructor {current_user['userid']} sending notification to: {request.recipientEmail}")
 
-        if not student:
-            raise HTTPException(status_code=404, detail="Student with this email not found")
+        with engine.connect() as conn:
+            # Find the student by email (case-insensitive)
+            student = conn.execute(
+                text("""
+                    SELECT userid, email, role
+                    FROM users
+                    WHERE LOWER(email) = LOWER(:email) AND role = 'student'
+                """),
+                {"email": request.recipientEmail}
+            ).fetchone()
 
-        # Create notification record
-        conn.execute(
-            text("""
-                INSERT INTO notifications (userid, senderid, title, message, isread, createdat)
-                VALUES (:userid, :senderid, :title, :message, FALSE, CURRENT_TIMESTAMP)
-            """),
-            {
-                "userid": student[0],
-                "senderid": current_user["userid"],
-                "title": request.title,
-                "message": request.message
-            }
-        )
-        conn.commit()
+            if not student:
+                print(f"Student not found with email: {request.recipientEmail}")
+                raise HTTPException(status_code=404, detail="Student with this email not found")
 
-    return {
-        "message": "Notification sent successfully",
-        "recipientEmail": request.recipientEmail
-    }
+            print(f"Found student: {student[0]} (email: {student[1]})")
+
+            # Create notification record with proper transaction
+            conn.execute(
+                text("""
+                    INSERT INTO notifications (userid, senderid, title, message, isread, createdat)
+                    VALUES (:userid, :senderid, :title, :message, FALSE, CURRENT_TIMESTAMP)
+                """),
+                {
+                    "userid": str(student[0]),
+                    "senderid": str(current_user["userid"]),
+                    "title": request.title,
+                    "message": request.message
+                }
+            )
+            conn.commit()
+
+            print(f"Notification inserted successfully for student {student[0]} from instructor {current_user['userid']}")
+
+        return {
+            "message": "Notification sent successfully",
+            "recipientEmail": request.recipientEmail
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error sending notification: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to send notification: {str(e)}")
 
 
 #marking the notification as read, even in the database 

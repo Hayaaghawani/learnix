@@ -36,7 +36,12 @@ function StudentDashboard() {
       <div className="w-full bg-[#6E5C86] text-white px-8 py-4 flex justify-between items-center">
 <h1 className="text-xl italic text-purple-50 font-semibold">Student Dashboard</h1>
         <div className="flex gap-6">
-          <button className="hover:text-gray-200">Notifications</button>
+          <button 
+            onClick={() => navigate("/student/notifications")}
+            className="hover:text-gray-200 transition"
+          >
+            Notifications
+          </button>
           <button className="hover:text-gray-200">Profile</button>
           <button className="hover:text-gray-200">Logout</button>
         </div>

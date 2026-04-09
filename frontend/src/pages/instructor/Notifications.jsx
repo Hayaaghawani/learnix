@@ -74,6 +74,8 @@ function Notifications() {
         return
       }
 
+      console.log("Sending notification to:", studentEmail)
+
       const response = await fetch(`${API_BASE_URL}/notifications/send`, {
         method: "POST",
         headers: {
@@ -87,9 +89,12 @@ function Notifications() {
         })
       })
 
+      console.log("Response status:", response.status)
+      const responseData = await response.json()
+      console.log("Response data:", responseData)
+
       if (!response.ok) {
-        const errorData = await response.json()
-        setSendError(errorData.detail || "Failed to send notification")
+        setSendError(responseData.detail || `Failed to send notification (${response.status})`)
         setSendLoading(false)
         return
       }
@@ -99,11 +104,14 @@ function Notifications() {
       setNotificationTitle("")
       setNotificationMessage("")
 
+      // Refresh the received messages list
+      fetchNotifications()
+
       // Clear success message after 3 seconds
       setTimeout(() => setSendSuccess(""), 3000)
     } catch (error) {
       console.error("Error sending notification:", error)
-      setSendError("Failed to send message. Please try again.")
+      setSendError(`Error: ${error.message || "Failed to send message. Please try again."}`)
     } finally {
       setSendLoading(false)
     }
