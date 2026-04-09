@@ -82,20 +82,32 @@ function StudentNotifications() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F1F7] px-6 py-8">
+    <div className="min-h-screen bg-[#F4F1F7] px-10 py-10 relative overflow-hidden">
+      {/* Background shapes */}
+      <div className="absolute top-20 left-[-80px] w-72 h-72 bg-[#CBBED8] opacity-30 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-10 right-[-80px] w-72 h-72 bg-[#B6A7CC] opacity-30 rounded-full blur-3xl"></div>
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#8E7DA5] to-[#B6A7CC] text-white rounded-xl shadow-lg p-8 mb-10">
-        <div className="flex items-center gap-3 mb-2">
+      <div className="bg-gradient-to-r from-[#8E7DA5] to-[#B6A7CC] text-white rounded-xl shadow-lg p-8 mb-10 flex justify-between items-center relative z-10">
+        <div className="flex items-center gap-3">
           <Bell size={28} />
-          <h1 className="text-3xl font-semibold">Messages</h1>
+          <div>
+            <h1 className="text-3xl font-semibold">Messages</h1>
+            <p className="text-sm opacity-90 mt-1">
+              {notifications.length} message{notifications.length !== 1 ? "s" : ""}
+            </p>
+          </div>
         </div>
-        <p className="text-sm opacity-90">
-          {notifications.length} message{notifications.length !== 1 ? "s" : ""}
-        </p>
+        <button
+          onClick={() => navigate("/student")}
+          className="bg-white text-[#6E5C86] px-5 py-3 rounded-lg font-medium shadow hover:scale-105 transition"
+        >
+          Back to Dashboard
+        </button>
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto relative z-10">
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <Loader2 className="animate-spin text-[#8E7DA5]" size={32} />
@@ -129,8 +141,8 @@ function StudentNotifications() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
                     {/* Sender Info */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="inline-block w-8 h-8 rounded-full bg-[#8E7DA5] text-white text-xs font-bold flex items-center justify-center">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="inline-block w-10 h-10 rounded-full bg-gradient-to-br from-[#8E7DA5] to-[#B6A7CC] text-white text-xs font-bold flex items-center justify-center">
                         {notification.senderFirstName.charAt(0)}
                         {notification.senderLastName.charAt(0)}
                       </span>
@@ -144,13 +156,16 @@ function StudentNotifications() {
                       </div>
                     </div>
 
+                    {/* Divider */}
+                    <div className="border-t my-3"></div>
+
                     {/* Title */}
-                    <h3 className="text-lg font-semibold text-gray-800 mt-3 mb-2">
+                    <h3 className="text-lg font-semibold text-[#3e2764] mb-2">
                       {notification.title}
                     </h3>
 
                     {/* Message */}
-                    <p className="text-gray-700 leading-relaxed mb-3">
+                    <p className="text-gray-700 leading-relaxed mb-4 whitespace-pre-wrap">
                       {notification.message}
                     </p>
 

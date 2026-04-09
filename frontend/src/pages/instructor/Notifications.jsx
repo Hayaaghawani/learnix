@@ -181,9 +181,13 @@ function Notifications() {
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
   return (
-    <div className="min-h-screen bg-[#F4F1F7] px-10 py-10">
+    <div className="min-h-screen bg-[#F4F1F7] px-10 py-10 relative overflow-hidden">
+      {/* Background shapes */}
+      <div className="absolute top-20 left-[-80px] w-72 h-72 bg-[#CBBED8] opacity-30 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-10 right-[-80px] w-72 h-72 bg-[#B6A7CC] opacity-30 rounded-full blur-3xl"></div>
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#8E7DA5] to-[#B6A7CC] text-white rounded-xl shadow-lg p-8 mb-10 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-[#8E7DA5] to-[#B6A7CC] text-white rounded-xl shadow-lg p-8 mb-10 flex justify-between items-center relative z-10">
         <div>
           <h1 className="text-3xl font-semibold">Notifications</h1>
           <p className="text-sm opacity-90 mt-1">
@@ -198,10 +202,10 @@ function Notifications() {
         </button>
       </div>
 
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-8 relative z-10">
         {/* Send Notification Form */}
         <div className="bg-white rounded-xl shadow-lg p-8 border-t-4 border-[#8E7DA5]">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Send Message to Student</h2>
+          <h2 className="text-2xl font-semibold text-[#3e2764] mb-6">Send Message to Student</h2>
 
           {sendSuccess && (
             <div className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded-lg mb-4">
@@ -262,7 +266,7 @@ function Notifications() {
             </div>
 
             {/* Submit Button */}
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-end pt-4">
               <button
                 type="button"
                 onClick={() => {
@@ -299,7 +303,7 @@ function Notifications() {
 
         {/* Received Notifications */}
         <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Received Messages</h2>
+          <h2 className="text-2xl font-semibold text-[#3e2764] mb-6">Received Messages</h2>
 
           {loading ? (
             <div className="flex justify-center items-center py-12">
@@ -334,7 +338,7 @@ function Notifications() {
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <p className="text-gray-800 font-medium mb-2">
+                      <p className="text-[#3e2764] font-semibold mb-2">
                         {notification.title}
                       </p>
                       <p className="text-gray-700 mb-2">
