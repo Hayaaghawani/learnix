@@ -16,6 +16,10 @@ class CourseCreate(BaseModel):
     endDate: str     # format: YYYY-MM-DD
 
 
+class JoinCourseRequest(BaseModel):
+    joinKey: str
+
+
 # GET MY COURSES
 @router.get("/my")
 def get_my_courses(current_user: dict = Depends(get_current_user)):
@@ -157,6 +161,62 @@ def create_course(
     }
 
 
+# JOIN COURSE (STUDENT)
+@router.post("/join")
+def join_course(
+    request: JoinCourseRequest,
+    current_user: dict = Depends(require_role(["student"]))
+):
+    join_key = request.joinKey or ""
+    if len(join_key) <= 36:
+        raise HTTPException(status_code=400, detail="Invalid join code")
+
+    course_id = join_key[-36:]
+    instructor_username = join_key[:-36].lower()
+
+    with engine.connect() as conn:
+        course = conn.execute(
+            text("""
+                SELECT c.courseid, c.coursename
+                FROM courses c
+                JOIN users u ON c.instructorid = u.userid
+                WHERE c.courseid = :course_id
+                  AND lower(split_part(u.email, '@', 1)) = :username
+            """),
+            {"course_id": course_id, "username": instructor_username}
+        ).fetchone()
+
+        if not course:
+            raise HTTPException(status_code=400, detail="Invalid join code")
+
+        existing = conn.execute(
+            text("""
+                SELECT 1
+                FROM enrollments
+                WHERE student_id = :student_id
+                  AND course_id = :course_id
+            """),
+            {"student_id": current_user["userid"], "course_id": course_id}
+        ).fetchone()
+
+        if existing:
+            return {
+                "message": "You are already enrolled in this course.",
+                "courseId": str(course[0])
+            }
+
+        conn.execute(
+            text("INSERT INTO enrollments (student_id, course_id) VALUES (:student_id, :course_id)"),
+            {"student_id": current_user["userid"], "course_id": course_id}
+        )
+        conn.commit()
+
+    return {
+        "message": "You have been enrolled in the course.",
+        "courseId": course_id
+    }
+
+
 # DELETE COURSE (INSTRUCTOR OR ADMIN)
 @router.delete("/{course_id}")
 def delete_course(
@@ -208,9 +268,11 @@ def get_course_students(
         if current_user["role"] == "instructor":
             course = conn.execute(
                 text("""
-                    SELECT courseid, instructorid, coursename
-                    FROM courses
-                    WHERE courseid = :course_id
+                    SELECT c.courseid, c.instructorid, c.coursename,
+                           lower(split_part(u.email, '@', 1)) AS username
+                    FROM courses c
+                    JOIN users u ON c.instructorid = u.userid
+                    WHERE c.courseid = :course_id
                 """),
                 {"course_id": course_id}
             ).fetchone()
@@ -222,13 +284,16 @@ def get_course_students(
                 raise HTTPException(status_code=403, detail="Not allowed to access this course")
 
             course_name = course[2]
+            instructor_username = course[3]
 
         else:
             course = conn.execute(
                 text("""
-                    SELECT courseid, instructorid, coursename
-                    FROM courses
-                    WHERE courseid = :course_id
+                    SELECT c.courseid, c.instructorid, c.coursename,
+                           lower(split_part(u.email, '@', 1)) AS username
+                    FROM courses c
+                    JOIN users u ON c.instructorid = u.userid
+                    WHERE c.courseid = :course_id
                 """),
                 {"course_id": course_id}
             ).fetchone()
@@ -237,6 +302,7 @@ def get_course_students(
                 raise HTTPException(status_code=404, detail="Course not found")
 
             course_name = course[2]
+            instructor_username = course[3]
 
         # get enrolled students
         result = conn.execute(
@@ -261,6 +327,7 @@ def get_course_students(
     return {
         "courseId": course_id,
         "courseName": course_name,
+        "enrollmentCode": f"{instructor_username}{course_id}",
         "count": len(students),
         "students": students
     }
