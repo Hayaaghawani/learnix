@@ -15,6 +15,8 @@ from app.services.rag.llm_service import RAGService
 from app.services.rag.pedagogical_controller import PedagogicalController
 from app.api import attempts
 
+from app.api.v1 import router_materials
+
 # ── App init ────────────────────────────────────────────────
 app = FastAPI()
 
@@ -34,6 +36,7 @@ app.include_router(courses_router)
 app.include_router(exercises_router)
 app.include_router(attempts.router)
 app.include_router(admin_router)
+app.include_router(router_materials.router)
 
 # ── RAG startup ─────────────────────────────────────────────
 rag_service = RAGService(knowledge_base_path="data/knowledge_base")

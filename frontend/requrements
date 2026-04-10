@@ -18,3 +18,11 @@ ALTER TABLE exercise ALTER COLUMN referencesolution TYPE character varying(500);
 
 ALTER TABLE exercisestype 
 DROP CONSTRAINT exercisestype_defaultcooldownstrategy_check;
+
+ALTER TABLE material 
+ADD COLUMN courseid uuid REFERENCES courses(courseid) ON DELETE CASCADE,
+ADD COLUMN title character varying(100),
+ADD COLUMN filetype character varying(20),
+ADD COLUMN filename character varying(200),
+ADD COLUMN uploadedby uuid REFERENCES users(userid),
+ADD COLUMN createdat timestamp DEFAULT CURRENT_TIMESTAMP;
