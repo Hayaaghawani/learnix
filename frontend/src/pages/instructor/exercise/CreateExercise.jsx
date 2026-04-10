@@ -10,7 +10,7 @@ function CreateExercise() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const [activeTab, setActiveTab] = useState("details") // "details" | "preview"
+  const [activeTab, setActiveTab] = useState("details")
 
   // Form state
   const [title, setTitle] = useState("")
@@ -20,6 +20,35 @@ function CreateExercise() {
   const [dueDate, setDueDate] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  // AI modes — default + custom from DB
+  const [availableModes, setAvailableModes] = useState([
+    { value: "beginner", label: "Beginner — Full hints allowed" },
+    { value: "intermediate", label: "Intermediate — Partial hints only" },
+    { value: "senior", label: "Senior — Minimal guidance" },
+    { value: "professional", label: "Professional — No AI help" },
+  ])
+
+
+  useEffect(() => {
+    const fetchModes = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const response = await fetch(`${API_BASE_URL}/exercises/types/course/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (!response.ok) return
+        const data = await response.json()
+        const custom = (data.types || [])
+          .filter(t => !t.isSystemPresent)
+          .map(t => ({ value: t.name.toLowerCase(), label: `${t.name} — Custom` }))
+        if (custom.length > 0) {
+          setAvailableModes(prev => [...prev, ...custom])
+        }
+      } catch {}
+    }
+    fetchModes()
+  }, [id])
 
   // Test cases
   const [testCases, setTestCases] = useState([{ input: "", output: "" }])
@@ -52,6 +81,7 @@ function CreateExercise() {
       .map((tc, i) => `Case ${i + 1}: expected output = "${tc.output}"`)
       .join("\n")
 
+     
     const prompt = `You are a code evaluator. The programming exercise is:
 "${problemStatement || "(no problem statement)"}"
 
@@ -91,10 +121,8 @@ Reply ONLY in this exact JSON format with no extra text:
 
   // Save exercise
   const saveExercise = async () => {
-    if (title.trim().length > 100) {
-  setError("Title must be under 100 characters")
-  return
-}
+    if (title.trim().length > 100) { setError("Title must be under 100 characters"); return }
+    if (!title.trim()) { setError("Exercise title is required"); return }
     if (!problemStatement.trim()) { setError("Problem statement is required"); return }
     if (!solution.trim()) { setError("Canonical solution is required"); return }
     if (!dueDate) { setError("Due date is required"); return }
@@ -146,7 +174,7 @@ Reply ONLY in this exact JSON format with no extra text:
   return (
     <div className="min-h-screen bg-[#F4F1F7]">
 
-      {/* ── TOP TAB BAR ── */}
+      {/* TOP TAB BAR */}
       <div className="bg-white border-b border-gray-200 px-10 pt-8 pb-0">
         <h1 className="text-2xl font-semibold text-[#3e2764] mb-6">Create Exercise</h1>
         <div className="flex gap-1">
@@ -173,14 +201,13 @@ Reply ONLY in this exact JSON format with no extra text:
         </div>
       </div>
 
-      {/* ── CONTENT AREA ── */}
+      {/* CONTENT AREA */}
       <div className="px-10 py-8">
 
         {/* DETAILS TAB */}
         {activeTab === "details" && (
           <div className="bg-white p-8 rounded-xl shadow space-y-6 max-w-3xl mx-auto">
 
-            {/* Title */}
             <div>
               <label className="font-medium block mb-2">Title</label>
               <input
@@ -191,7 +218,6 @@ Reply ONLY in this exact JSON format with no extra text:
               />
             </div>
 
-            {/* Problem Statement */}
             <div>
               <label className="font-medium block mb-2">Problem Statement</label>
               <textarea
@@ -203,7 +229,7 @@ Reply ONLY in this exact JSON format with no extra text:
               />
             </div>
 
-            {/* AI Assistance Mode */}
+            {/* AI Assistance Mode — now includes custom modes */}
             <div>
               <label className="font-medium block mb-2">AI Assistance Mode</label>
               <select
@@ -211,14 +237,14 @@ Reply ONLY in this exact JSON format with no extra text:
                 onChange={(e) => setAiMode(e.target.value)}
                 className="border p-3 rounded-lg w-full"
               >
-                <option value="beginner">Beginner — Full hints allowed</option>
-                <option value="intermediate">Intermediate — Partial hints only</option>
-                <option value="senior">Senior — Minimal guidance</option>
-                <option value="professional">Professional — No AI help</option>
+                {availableModes.map(mode => (
+                  <option key={mode.value} value={mode.value}>
+                    {mode.label}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Due Date */}
             <div>
               <label className="font-medium block mb-2">Due Date</label>
               <input
@@ -229,7 +255,6 @@ Reply ONLY in this exact JSON format with no extra text:
               />
             </div>
 
-            {/* Canonical Solution */}
             <div>
               <label className="font-medium block mb-2">Canonical Solution</label>
               <textarea
@@ -241,7 +266,6 @@ Reply ONLY in this exact JSON format with no extra text:
               />
             </div>
 
-            {/* Test Cases */}
             <div>
               <div className="flex justify-between items-center mb-3">
                 <label className="font-medium">
@@ -324,7 +348,6 @@ Reply ONLY in this exact JSON format with no extra text:
         {activeTab === "preview" && (
           <div className="max-w-3xl mx-auto space-y-6">
 
-            {/* Exercise snapshot */}
             <div className="bg-white rounded-xl shadow p-6">
               <h2 className="font-semibold text-[#3e2764] text-lg mb-4">Exercise Preview</h2>
               <div className="bg-[#F4F1F7] rounded-lg p-5 space-y-3">
@@ -360,7 +383,6 @@ Reply ONLY in this exact JSON format with no extra text:
               </div>
             </div>
 
-            {/* Code tester */}
             <div className="bg-white rounded-xl shadow p-6 space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="font-semibold text-[#3e2764] text-lg">Test Your Solution</h2>

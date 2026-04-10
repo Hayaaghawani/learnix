@@ -24,7 +24,19 @@ class ExerciseCreate(BaseModel):
     dueDate: str
     testCases: list[TestCaseCreate] = []
 
-#Get exercises for a course
+class CustomModeCreate(BaseModel):
+    name: str
+    description: str | None = None
+    defaultHintLimit: int = 3
+    defaultCooldownStrategy: int = 30
+    strictLevel: int = 1
+    guidanceStyle: str | None = None
+    anticipatedMisconceptions: str | None = None
+    category: str | None = None
+
+
+# ── MUST BE FIRST — specific paths before /{exercise_id} ──────────────────
+
 @router.get("/course/{course_id}")
 def get_exercises_by_course(
     course_id: str,
@@ -34,30 +46,19 @@ def get_exercises_by_course(
         if current_user["role"] == "student":
             enrollment = conn.execute(
                 text("""
-                    SELECT 1
-                    FROM enrollments
-                    WHERE student_id = :userid
-                      AND course_id = :course_id
+                    SELECT 1 FROM enrollments
+                    WHERE student_id = :userid AND course_id = :course_id
                 """),
-                {
-                    "userid": current_user["userid"],
-                    "course_id": course_id
-                }
+                {"userid": current_user["userid"], "course_id": course_id}
             ).fetchone()
-
             if not enrollment:
                 raise HTTPException(status_code=403, detail="Not enrolled in this course")
 
         elif current_user["role"] == "instructor":
             course = conn.execute(
-                text("""
-                    SELECT instructorid
-                    FROM courses
-                    WHERE courseid = :course_id
-                """),
+                text("SELECT instructorid FROM courses WHERE courseid = :course_id"),
                 {"course_id": course_id}
             ).fetchone()
-
             if not course or str(course[0]) != str(current_user["userid"]):
                 raise HTTPException(status_code=403, detail="Not your course")
 
@@ -93,83 +94,113 @@ def get_exercises_by_course(
             "userId": str(row[14]),
         })
 
-    return {
-        "count": len(exercises),
-        "exercises": exercises
-    }
+    return {"count": len(exercises), "exercises": exercises}
 
-#Get one exercise info
-@router.get("/{exercise_id}")
-def get_exercise(
-    exercise_id: str,
+
+@router.get("/types/course/{course_id}")
+def get_exercise_types(
+    course_id: str,
     current_user: dict = Depends(get_current_user)
 ):
     with engine.connect() as conn:
-        exercise = conn.execute(
+        result = conn.execute(
             text("""
-                SELECT exerciseid, courseid, title, difficultylevel, exercisetype,
-                       keyconcept, prerequisites, problem, referencesolution,
-                       isactive, createdat, duedate, updatedat, typeid, userid
-                FROM exercise
-                WHERE exerciseid = :exercise_id
+                SELECT typeid, name, description, defaulthintlimit,
+                       defaultcooldownstrategy, strictlevel, guidancestyle,
+                       anticipatedmisconceptions, issystempresent, category
+                FROM exercisestype
+                WHERE issystempresent = TRUE OR category = :course_id
+                ORDER BY issystempresent DESC, name ASC
             """),
-            {"exercise_id": exercise_id}
-        ).fetchone()
-
-        if not exercise:
-            raise HTTPException(status_code=404, detail="Exercise not found")
-
-        course_id = str(exercise[1])
-
-        if current_user["role"] == "student":
-            enrollment = conn.execute(
-                text("""
-                    SELECT 1
-                    FROM enrollments
-                    WHERE student_id = :userid
-                      AND course_id = :course_id
-                """),
-                {
-                    "userid": current_user["userid"],
-                    "course_id": course_id
-                }
-            ).fetchone()
-
-            if not enrollment:
-                raise HTTPException(status_code=403, detail="Not allowed to access this exercise")
-
-        elif current_user["role"] == "instructor":
-            course = conn.execute(
-                text("""
-                    SELECT instructorid
-                    FROM courses
-                    WHERE courseid = :course_id
-                """),
-                {"course_id": course_id}
-            ).fetchone()
-
-            if not course or str(course[0]) != str(current_user["userid"]):
-                raise HTTPException(status_code=403, detail="Not allowed to access this exercise")
+            {"course_id": course_id}
+        ).fetchall()
 
     return {
-        "exerciseId": str(exercise[0]),
-        "courseId": str(exercise[1]),
-        "title": exercise[2],
-        "difficultyLevel": exercise[3],
-        "exerciseType": exercise[4],
-        "keyConcept": exercise[5],
-        "prerequisites": exercise[6],
-        "problem": exercise[7],
-        "referenceSolution": exercise[8],
-        "isActive": exercise[9],
-        "createdAt": exercise[10],
-        "dueDate": exercise[11],
-        "updatedAt": exercise[12],
-        "typeId": str(exercise[13]),
-        "userId": str(exercise[14]),
+        "types": [
+            {
+                "typeId": str(row[0]),
+                "name": row[1],
+                "description": row[2],
+                "defaultHintLimit": row[3],
+                "defaultCooldownStrategy": row[4],
+                "strictLevel": row[5],
+                "guidanceStyle": row[6],
+                "anticipatedMisconceptions": row[7],
+                "isSystemPresent": row[8],
+                "category": row[9],
+            }
+            for row in result
+        ]
     }
 
-#Create exercise as instructor:
+
+@router.post("/types/create")
+def create_custom_mode(
+    request: CustomModeCreate,
+    current_user: dict = Depends(require_role(["instructor"]))
+):
+    with engine.connect() as conn:
+        new_type = conn.execute(
+            text("""
+                INSERT INTO exercisestype (
+                    typeid, name, description, defaulthintlimit,
+                    defaultcooldownstrategy, strictlevel, guidancestyle,
+                    anticipatedmisconceptions, issystempresent, category
+                )
+                VALUES (
+                    uuid_generate_v4(), :name, :description, :hintlimit,
+                    :cooldown, :strictlevel, :guidancestyle,
+                    :misconceptions, FALSE, :category
+                )
+                RETURNING typeid
+            """),
+            {
+                "name": request.name,
+                "description": request.description,
+                "hintlimit": request.defaultHintLimit,
+                "cooldown": request.defaultCooldownStrategy,
+                "strictlevel": request.strictLevel,
+                "guidancestyle": request.guidanceStyle,
+                "misconceptions": request.anticipatedMisconceptions,
+                "category": request.category,
+            }
+        ).fetchone()
+        conn.commit()
+
+    return {
+        "message": "Custom mode created successfully",
+        "typeId": str(new_type[0])
+    }
+
+@router.delete("/types/{type_id}")
+def delete_custom_mode(
+    type_id: str,
+    current_user: dict = Depends(require_role(["instructor"]))
+):
+    with engine.connect() as conn:
+        mode = conn.execute(
+            text("""
+                SELECT typeid, issystempresent
+                FROM exercisestype
+                WHERE typeid = :type_id
+            """),
+            {"type_id": type_id}
+        ).fetchone()
+
+        if not mode:
+            raise HTTPException(status_code=404, detail="Mode not found")
+
+        if mode[1]:
+            raise HTTPException(status_code=403, detail="Cannot delete system modes")
+
+        conn.execute(
+            text("DELETE FROM exercisestype WHERE typeid = :type_id"),
+            {"type_id": type_id}
+        )
+        conn.commit()
+
+    return {"message": "Mode deleted successfully", "typeId": type_id}
+    
 @router.post("/")
 def create_exercise(
     request: ExerciseCreate,
@@ -177,26 +208,17 @@ def create_exercise(
 ):
     with engine.connect() as conn:
         course = conn.execute(
-            text("""
-                SELECT instructorid
-                FROM courses
-                WHERE courseid = :course_id
-            """),
+            text("SELECT instructorid FROM courses WHERE courseid = :course_id"),
             {"course_id": request.courseId}
         ).fetchone()
 
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
-
         if str(course[0]) != str(current_user["userid"]):
             raise HTTPException(status_code=403, detail="You do not own this course")
 
         exercise_type = conn.execute(
-            text("""
-                SELECT typeid
-                FROM exercisestype
-                WHERE typeid = :type_id
-            """),
+            text("SELECT typeid FROM exercisestype WHERE typeid = :type_id"),
             {"type_id": request.typeId}
         ).fetchone()
 
@@ -235,9 +257,6 @@ def create_exercise(
             }
         ).fetchone()
 
-
-
-        # Save test cases
         for tc in request.testCases:
             conn.execute(
                 text("""
@@ -253,8 +272,70 @@ def create_exercise(
                 }
             )
         conn.commit()
-        
+
     return {
         "message": "Exercise created successfully",
         "exerciseId": str(new_exercise[0])
+    }
+
+
+# ── MUST BE LAST — catches any /{exercise_id} ─────────────────────────────
+
+@router.get("/{exercise_id}")
+def get_exercise(
+    exercise_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    with engine.connect() as conn:
+        exercise = conn.execute(
+            text("""
+                SELECT exerciseid, courseid, title, difficultylevel, exercisetype,
+                       keyconcept, prerequisites, problem, referencesolution,
+                       isactive, createdat, duedate, updatedat, typeid, userid
+                FROM exercise
+                WHERE exerciseid = :exercise_id
+            """),
+            {"exercise_id": exercise_id}
+        ).fetchone()
+
+        if not exercise:
+            raise HTTPException(status_code=404, detail="Exercise not found")
+
+        course_id = str(exercise[1])
+
+        if current_user["role"] == "student":
+            enrollment = conn.execute(
+                text("""
+                    SELECT 1 FROM enrollments
+                    WHERE student_id = :userid AND course_id = :course_id
+                """),
+                {"userid": current_user["userid"], "course_id": course_id}
+            ).fetchone()
+            if not enrollment:
+                raise HTTPException(status_code=403, detail="Not allowed to access this exercise")
+
+        elif current_user["role"] == "instructor":
+            course = conn.execute(
+                text("SELECT instructorid FROM courses WHERE courseid = :course_id"),
+                {"course_id": course_id}
+            ).fetchone()
+            if not course or str(course[0]) != str(current_user["userid"]):
+                raise HTTPException(status_code=403, detail="Not allowed to access this exercise")
+
+    return {
+        "exerciseId": str(exercise[0]),
+        "courseId": str(exercise[1]),
+        "title": exercise[2],
+        "difficultyLevel": exercise[3],
+        "exerciseType": exercise[4],
+        "keyConcept": exercise[5],
+        "prerequisites": exercise[6],
+        "problem": exercise[7],
+        "referenceSolution": exercise[8],
+        "isActive": exercise[9],
+        "createdAt": exercise[10],
+        "dueDate": exercise[11],
+        "updatedAt": exercise[12],
+        "typeId": str(exercise[13]),
+        "userId": str(exercise[14]),
     }
