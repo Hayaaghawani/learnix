@@ -37,6 +37,8 @@ function StudentDashboard() {
   const [joinSuccess, setJoinSuccess] = useState("");
   const [joining, setJoining] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState([])
+  const [deadlinesLoading, setDeadlinesLoading] = useState(false)
   const [studentName, setStudentName] = useState("")
   const [initials, setInitials] = useState("ST")
 
@@ -94,12 +96,75 @@ function StudentDashboard() {
       })
       const data = await response.json()
       if (!response.ok) { setError(data.detail || "Failed to load courses."); setCourses([]); return }
-      setCourses(data.courses || [])
+      const nextCourses = data.courses || []
+      setCourses(nextCourses)
+      fetchUpcomingDeadlines(nextCourses)
     } catch {
       setError("Failed to load courses. Please try again.")
       setCourses([])
+      setUpcomingDeadlines([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchUpcomingDeadlines = async (courseList) => {
+    if (!Array.isArray(courseList) || courseList.length === 0) {
+      setUpcomingDeadlines([])
+      return
+    }
+
+    setDeadlinesLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setUpcomingDeadlines([])
+        return
+      }
+
+      const responses = await Promise.all(
+        courseList.map((course) =>
+          fetch(`${API_BASE_URL}/exercises/course/${course.courseId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      )
+
+      const payloads = await Promise.all(
+        responses.map(async (resp) => {
+          if (!resp.ok) return { exercises: [] }
+          return resp.json()
+        })
+      )
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const deadlines = []
+      payloads.forEach((payload, index) => {
+        const course = courseList[index]
+        ;(payload.exercises || []).forEach((exercise) => {
+          if (!exercise.dueDate) return
+          const due = new Date(exercise.dueDate)
+          if (Number.isNaN(due.getTime())) return
+          due.setHours(0, 0, 0, 0)
+          if (due < today) return
+
+          deadlines.push({
+            id: exercise.exerciseId,
+            title: exercise.title,
+            date: exercise.dueDate,
+            courseName: course.courseName,
+          })
+        })
+      })
+
+      deadlines.sort((a, b) => new Date(a.date) - new Date(b.date))
+      setUpcomingDeadlines(deadlines.slice(0, 8))
+    } catch {
+      setUpcomingDeadlines([])
+    } finally {
+      setDeadlinesLoading(false)
     }
   }
 
@@ -139,12 +204,6 @@ function StudentDashboard() {
     fetchUnreadCount()
     fetchStudentName()
   }, [])
-
-  // Dummy deadlines — replace with real API when ready
-  const deadlines = [
-    { id: 1, title: "Database Assignment 2", date: "2026-04-13" },
-    { id: 2, title: "OS Quiz", date: "2026-04-20" }
-  ]
 
   return (
     <div className="min-h-screen bg-[#F4F1F7] px-10 py-10 relative overflow-hidden">
@@ -228,17 +287,26 @@ function StudentDashboard() {
       {/* Upcoming Deadlines */}
       <div className="bg-white rounded-xl shadow-md p-6 mb-8 relative z-10">
         <h3 className="text-lg font-semibold mb-4">Upcoming Deadlines</h3>
-        {deadlines.map((item) => (
-          <div key={item.id} className="flex justify-between items-center border-b py-3 last:border-none">
-            <div className="flex items-center gap-3">
-              <span className="text-lg">📅</span>
-              <span className="text-gray-700">{item.title}</span>
+        {deadlinesLoading ? (
+          <p className="text-gray-400 text-sm">Loading deadlines...</p>
+        ) : upcomingDeadlines.length === 0 ? (
+          <p className="text-gray-400 text-sm">No upcoming deadlines.</p>
+        ) : (
+          upcomingDeadlines.map((item) => (
+            <div key={item.id} className="flex justify-between items-center border-b py-3 last:border-none">
+              <div className="flex items-center gap-3">
+                <span className="text-lg">📅</span>
+                <div>
+                  <p className="text-gray-700">{item.title}</p>
+                  <p className="text-xs text-gray-400">{item.courseName}</p>
+                </div>
+              </div>
+              <span className={`font-medium text-sm ${getDeadlineColor(item.date)}`}>
+                {new Date(item.date).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
+              </span>
             </div>
-            <span className={`font-medium text-sm ${getDeadlineColor(item.date)}`}>
-              {new Date(item.date).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
-            </span>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* My Courses */}
