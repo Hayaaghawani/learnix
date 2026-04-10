@@ -100,17 +100,7 @@ function Navbar() {
             Privacy
           </NavLink>
 
-          {isLoggedIn && location.pathname !== "/" && notificationsPath && (
-            <button
-              onClick={() => navigate(notificationsPath)}
-              className="flex items-center gap-2 hover:text-[#3e2764] transition relative"
-              title="Messages"
-            >
-              <Bell size={20} />
-              <span>Messages</span>
-            </button>
-          )}
-
+         
           {isLoggedIn && location.pathname !== "/" && (
             <button
               onClick={handleLogout}

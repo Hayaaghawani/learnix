@@ -159,10 +159,8 @@ def get_current_user(request: Request):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         userid = payload.get("userid")
-
         if not userid:
             raise HTTPException(status_code=401, detail="Invalid token")
-
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
@@ -170,7 +168,7 @@ def get_current_user(request: Request):
 
     with engine.connect() as conn:
         user = conn.execute(
-            text("SELECT userid, email, role FROM users WHERE userid = :userid"),
+            text("SELECT userid, email, role, firstname, lastname FROM users WHERE userid = :userid"),
             {"userid": userid}
         ).fetchone()
 
@@ -181,6 +179,8 @@ def get_current_user(request: Request):
         "userid": str(user[0]),
         "email": user[1],
         "role": user[2],
+        "firstname": user[3],
+        "lastname": user[4],
         "token": token
     }
 
