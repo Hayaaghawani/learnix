@@ -1,5 +1,4 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
-import { Bell } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
@@ -22,14 +21,11 @@ function Navbar() {
 
   const handleLogout = async () => {
     const token = localStorage.getItem("token")
-
     try {
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
       }
     } catch (error) {
@@ -42,76 +38,52 @@ function Navbar() {
     }
   }
 
-  const getNotificationsPath = () => {
-    if (userRole === "student") {
-      return "/student/notifications"
-    } else if (userRole === "instructor") {
-      return "/instructor/notifications"
-    }
-    return null
-  }
-
-  const notificationsPath = getNotificationsPath()
-
   return (
-   <header className="sticky top-0 left-0 w-full z-50 bg-[#8E7AAE]">
-      <div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
+    <header className="sticky top-0 left-0 w-full z-50 bg-[#7B6BA0] backdrop-blur-sm border-b border-[#6a5a8e]">
+      <div className="max-w-7xl mx-auto px-8 py-3.5 flex justify-between items-center">
 
-        {/* Logo */}
-        <div
-          onClick={() => navigate('/')}
-          className="text-2xl font-luxury cursor-pointer tracking-wide"
-        >
-          <span className="italic text-3xl">L</span>earnix
-        </div>
+    {/* Logo */}
+<div
+  onClick={() => navigate("/")}
+  className="flex items-center gap-0.5 cursor-pointer group"
+>
+  <span style={{ fontFamily: "'Great Vibes', cursive", color: "#f0ecda" }} className="text-5xl leading-none">
+    L
+  </span>
+  <span className="text-white/90 font-semibold tracking-widest text-lg">
+    earni
+  </span>
+  <span style={{ fontFamily: "'Great Vibes', cursive", color: "#ece7cd" }} className="text-5xl leading-none">
+    x
+  </span>
+</div>
+        {/* Nav links */}
+        <nav className="flex gap-8 text-sm tracking-wide text-white/80 font-medium items-center">
 
-        {/* Navigation Links */}
-  <nav className="flex gap-10 text-sm tracking-wide text-white font-medium items-center">
-          <NavLink
-            to="/about"
-            className={({ isActive }) =>
-              isActive
-                ? "text-white border-b-2 border-[#3e2764] pb-1"
-                : "hover:text-[#3e2764] transition"
-            }
-          >
-            About
-          </NavLink>
+          {["About", "Contact", "Privacy"].map((label) => (
+            <NavLink
+              key={label}
+              to={`/${label.toLowerCase()}`}
+              className={({ isActive }) =>
+                isActive
+                  ? "text-white relative after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-0.5 after:bg-white after:rounded-full"
+                  : "hover:text-white transition duration-200 relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-0.5 after:bg-white/60 after:rounded-full hover:after:w-full after:transition-all after:duration-300"
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
 
-          <NavLink
-            to="/contact"
-            className={({ isActive }) =>
-              isActive
-                ? "text-white border-b-2 border-[#3e2764] pb-1"
-                : "hover:text-[#3e2764] transition"
-            }
-          >
-            Contact
-          </NavLink>
-
-          <NavLink
-            to="/privacy"
-            className={({ isActive }) =>
-              isActive
-                ? "text-white border-b-2 border-[#3e2764] pb-1"
-                : "hover:text-[#3e2764] transition"
-            }
-          >
-            Privacy
-          </NavLink>
-
-         
           {isLoggedIn && location.pathname !== "/" && (
             <button
               onClick={handleLogout}
-              className="bg-white/20 px-3 py-1.5 rounded-md hover:bg-white/30 transition"
+              className="ml-2 text-white/90 border border-white/30 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-white/10 hover:border-white/50 transition duration-200"
             >
               Logout
             </button>
           )}
 
         </nav>
-
       </div>
     </header>
   )
