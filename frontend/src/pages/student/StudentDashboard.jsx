@@ -12,6 +12,7 @@ function StudentDashboard () {
   const [joinError, setJoinError] = useState("");
   const [joinSuccess, setJoinSuccess] = useState("");
   const [joining, setJoining] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const parseJoinKey = (value) => {
     const trimmed = value.trim()
@@ -53,7 +54,7 @@ function StudentDashboard () {
 
       setJoinSuccess(data.message || "Successfully joined the course!")
       setJoinInput("")
-      fetchCourses() // refresh My Courses section
+      fetchCourses()
 
     } catch (err) {
       setJoinError("Something went wrong. Please try again.")
@@ -90,18 +91,30 @@ function StudentDashboard () {
     }
   }
 
+  const fetchUnreadCount = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+      const response = await fetch(`${API_BASE_URL}/notifications/my`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!response.ok) return
+      const data = await response.json()
+      const unread = (data.notifications || []).filter(n => !n.isRead).length
+      setUnreadCount(unread)
+    } catch {
+      // silently fail — don't block dashboard if notifications fail
+    }
+  }
+
   useEffect(() => {
     fetchCourses()
+    fetchUnreadCount()
   }, [])
 
   const deadlines = [
     { id: 1, title: "Database Assignment 2", date: "March 18" },
     { id: 2, title: "OS Quiz", date: "March 20" }
-  ];
-
-  const announcements = [
-    "Database Systems – Assignment 2 uploaded",
-    "Operating Systems – Midterm date announced"
   ];
 
   return (
@@ -110,8 +123,21 @@ function StudentDashboard () {
       {/* Navbar */}
       <div className="w-full bg-[#6E5C86] text-white px-8 py-4 flex justify-between items-center">
         <h1 className="text-xl italic text-purple-50 font-semibold">Student Dashboard</h1>
-        <div className="flex gap-6">
-          <button onClick={() => navigate("/student/notifications")} className="hover:text-gray-200 transition">Notifications</button>
+        <div className="flex gap-6 items-center">
+
+          {/* Notifications button with unread badge */}
+          <button
+            onClick={() => navigate("/student/notifications")}
+            className="relative hover:text-gray-200 transition"
+          >
+            Notifications
+            {unreadCount > 0 && (
+              <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+
           <button className="hover:text-gray-200">Profile</button>
           <button className="hover:text-gray-200">Logout</button>
         </div>
@@ -145,14 +171,8 @@ function StudentDashboard () {
               {joining ? "Joining..." : "Join"}
             </button>
           </div>
-
-          {/* Feedback messages */}
-          {joinError && (
-            <p className="mt-3 text-red-600 text-sm">{joinError}</p>
-          )}
-          {joinSuccess && (
-            <p className="mt-3 text-green-600 text-sm font-medium">{joinSuccess}</p>
-          )}
+          {joinError && <p className="mt-3 text-red-600 text-sm">{joinError}</p>}
+          {joinSuccess && <p className="mt-3 text-green-600 text-sm font-medium">{joinSuccess}</p>}
         </div>
 
         {/* Upcoming Deadlines */}
@@ -201,14 +221,6 @@ function StudentDashboard () {
               ))
             )}
           </div>
-        </div>
-
-        {/* Announcements */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-4">Recent Announcements</h3>
-          {announcements.map((announcement, index) => (
-            <p key={index} className="border-b py-2 last:border-none">{announcement}</p>
-          ))}
         </div>
 
       </div>
