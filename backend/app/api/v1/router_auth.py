@@ -63,7 +63,7 @@ def login(request: LoginRequest):
         userid = result[0]
         stored_hash = result[1]
 
-        # ❌ WRONG PASSWORD
+        # WRONG PASSWORD
         if not verify_password(request.password, stored_hash):
             conn.execute(
                 text("""
@@ -80,7 +80,7 @@ def login(request: LoginRequest):
             conn.commit()
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
-        # ✅ SUCCESS LOGIN
+        #SUCCESS LOGIN
         token, expire_time = create_access_token(str(userid))
 
         # save session
