@@ -1,4 +1,3 @@
-# backend/app/services/rag/__init__.py
 from .chunker import FileProcessor
 from .embeddings import EmbeddingFactory
 from .vectorstore_provider import VectorStoreProvider

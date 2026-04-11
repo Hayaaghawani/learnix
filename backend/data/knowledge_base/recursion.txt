@@ -1,26 +1,52 @@
-Recursion is a programming technique where a function calls itself to solve a problem.
+# Recursion in Programming
 
-Every recursive function must have two parts:
-1. Base case: the condition that stops the recursion.
-2. Recursive case: the part where the function calls itself with a smaller input.
+## What is Recursion?
+Recursion is a technique where a function calls itself to solve a problem by breaking it down into smaller subproblems.
 
-Without a base case, recursion never stops and causes a stack overflow error.
+## Key Components
 
-Example - Factorial:
-factorial(0) = 1          <- base case
-factorial(n) = n * factorial(n-1)   <- recursive case
+### 1. Base Case
+The condition that stops the recursion.
+```
+if n == 0:
+    return 1  # Base case
+```
 
-In C++:
-int factorial(int n) {
-    if (n == 0) return 1;         // base case
-    return n * factorial(n - 1);  // recursive case
-}
+### 2. Recursive Case
+The function calls itself with a simpler input.
+```
+return n * factorial(n - 1)  # Recursive case
+```
 
-Common mistake: forgetting the base case, or writing a base case that is never reached.
+## Common Examples
 
-Trace example for factorial(3):
-factorial(3) = 3 * factorial(2)
-factorial(2) = 2 * factorial(1)
-factorial(1) = 1 * factorial(0)
-factorial(0) = 1  <- base case reached
-Result: 3 * 2 * 1 * 1 = 6
+### Factorial
+```
+def factorial(n):
+    if n == 0:
+        return 1
+    return n * factorial(n - 1)
+```
+
+### Fibonacci
+```
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+```
+
+## Advantages
+- Elegant and readable for certain problems
+- Natural for tree/graph traversal
+- Mirrors the problem definition
+
+## Disadvantages
+- Can be inefficient (repeated calculations)
+- Uses more memory (call stack)
+- Risk of stack overflow for large inputs
+
+## Optimization Techniques
+- **Memoization**: Cache results to avoid recalculation
+- **Tail Recursion**: Optimize for tail-recursive calls
+- **Iteration**: Converting recursion to loops

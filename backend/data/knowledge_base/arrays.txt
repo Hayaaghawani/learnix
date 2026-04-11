@@ -1,24 +1,29 @@
-An array is a collection of elements of the same type stored in contiguous memory.
+# Arrays in Programming
 
-Declaration in C++:
-int arr[5];              // array of 5 integers
-int arr[] = {1,2,3,4,5}; // array initialized with values
+## What is an Array?
+An array is a collection of elements of the same data type stored in contiguous memory locations.
 
-Accessing elements:
-- Indices start at 0
-- arr[0] is the first element
-- arr[n-1] is the last element of an array of size n
+## Key Concepts
+- **Index**: The position of an element in the array (usually starts at 0)
+- **Length**: The total number of elements in the array
+- **Bounds**: The valid range of indices (0 to length-1)
 
-Common mistake: accessing arr[n] on an array of size n causes out-of-bounds error.
+## Common Operations
+1. **Access**: array[index] - O(1)
+2. **Insert**: Adding an element - O(n)
+3. **Delete**: Removing an element - O(n)
+4. **Search**: Finding an element - O(n)
 
-Iterating over an array:
-for (int i = 0; i < size; i++) {
-    cout << arr[i] << endl;
-}
+## Example
+```
+array = [1, 2, 3, 4, 5]
+array[0] = 1   # First element
+array[4] = 5   # Last element
+array[5] = Error (out of bounds)
+```
 
-Arrays have a fixed size - you cannot resize them after creation.
-For dynamic sizing, use vectors: vector<int> v;
-
-2D arrays:
-int matrix[3][3];
-matrix[row][col] = value;
+## Time Complexity
+- Access: O(1)
+- Search: O(n)
+- Insert: O(n)
+- Delete: O(n)

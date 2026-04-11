@@ -1,30 +1,40 @@
-Loops allow repeated execution of a block of code.
+# Loops in Programming
 
-C++ has three main loop types:
+## What is a Loop?
+A loop is a control structure that repeats a block of code while a condition is true.
 
-1. for loop - use when you know how many times to repeat
-for (int i = 0; i < n; i++) {
-    // body
-}
+## Types of Loops
 
-2. while loop - use when you repeat based on a condition
-while (condition) {
-    // body
-}
+### 1. For Loop
+Used when you know the number of iterations in advance.
+```
+for i in range(5):
+    print(i)  # Prints 0 to 4
+```
 
-3. do-while loop - like while but executes the body at least once
-do {
-    // body
-} while (condition);
+### 2. While Loop
+Used when the condition is checked before each iteration.
+```
+count = 0
+while count < 5:
+    print(count)
+    count += 1
+```
 
-Common mistake: infinite loops happen when the condition never becomes false.
+### 3. Do-While Loop
+Used when you need at least one iteration (not available in Python).
 
-Loop control:
-- break: exits the loop immediately
-- continue: skips the rest of the current iteration
+## Common Patterns
+- **Counter**: for i in range(n)
+- **Condition**: while condition_is_true()
+- **Collection**: for item in collection
+- **Nested**: loops within loops
 
-Example - sum of 1 to n:
-int sum = 0;
-for (int i = 1; i <= n; i++) {
-    sum += i;
-}
+## Performance Considerations
+- Minimize operations inside the loop
+- Avoid nested loops when possible
+- Break/continue statements can optimize performance
+
+## Break and Continue
+- **break**: Exits the loop immediately
+- **continue**: Skips to the next iteration
