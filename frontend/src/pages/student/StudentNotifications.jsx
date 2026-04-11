@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { Trash2, Loader2, AlertCircle, Bell } from "lucide-react"
+import { Trash2, Loader2, AlertCircle, Bell, Check } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
@@ -9,6 +9,8 @@ function StudentNotifications() {
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length
 
   useEffect(() => {
     fetchNotifications()
@@ -92,6 +94,40 @@ function StudentNotifications() {
     }
   }
 
+  const markAsRead = async (notificationId) => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        alert("No authentication token found")
+        return
+      }
+
+      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        alert(errorData.detail || "Failed to mark notification as read")
+        return
+      }
+
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.notificationId === notificationId
+            ? { ...notif, isRead: true }
+            : notif
+        )
+      )
+    } catch (error) {
+      console.error("Error marking notification as read:", error)
+      alert("Failed to mark notification as read. Please try again.")
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F4F1F7] px-10 py-10 relative overflow-hidden">
       {/* Background shapes */}
@@ -105,7 +141,7 @@ function StudentNotifications() {
           <div>
             <h1 className="text-3xl font-semibold">Messages</h1>
             <p className="text-sm opacity-90 mt-1">
-              {notifications.length} message{notifications.length !== 1 ? "s" : ""}
+              {unreadCount} unread message{unreadCount !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -147,7 +183,11 @@ function StudentNotifications() {
             {notifications.map((notification) => (
               <div
                 key={notification.notificationId}
-                className="bg-white rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-[#8E7DA5] p-6"
+                className={`rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 ${
+                  notification.isRead
+                    ? "bg-white border-[#D1C5E3]"
+                    : "bg-blue-50 border-[#8E7DA5]"
+                }`}
               >
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
@@ -186,14 +226,25 @@ function StudentNotifications() {
                     </p>
                   </div>
 
-                  {/* Delete Button */}
-                  <button
-                    onClick={() => deleteNotification(notification.notificationId)}
-                    className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition flex-shrink-0"
-                    title="Delete message"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex gap-2 flex-shrink-0">
+                    {!notification.isRead && (
+                      <button
+                        onClick={() => markAsRead(notification.notificationId)}
+                        className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
+                        title="Mark as read"
+                      >
+                        <Check size={16} />
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => deleteNotification(notification.notificationId)}
+                      className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition"
+                      title="Delete message"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,11 +1,29 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from app.core.database import engine
 from app.api.v1.router_auth import get_current_user, require_role
 import uuid
 
 router = APIRouter(prefix="/exercises", tags=["Exercises"])
+
+
+def purge_expired_exercises(conn):
+    # Remove exercises immediately after their due date passes.
+    conn.execute(
+        text("""
+            DELETE FROM exercise
+            WHERE duedate < CURRENT_DATE
+        """)
+    )
+
+
+def ensure_exercisestype_schema_compat(conn):
+    # Keep compatibility with older databases where these columns are short VARCHAR.
+    conn.execute(text("ALTER TABLE exercisestype ALTER COLUMN guidancestyle TYPE text"))
+    conn.execute(text("ALTER TABLE exercisestype ALTER COLUMN anticipatedmisconceptions TYPE text"))
+    conn.execute(text("ALTER TABLE exercisestype ALTER COLUMN category TYPE text"))
 
 class TestCaseCreate(BaseModel):
     input: str | None = None
@@ -43,6 +61,9 @@ def get_exercises_by_course(
     current_user: dict = Depends(get_current_user)
 ):
     with engine.connect() as conn:
+        purge_expired_exercises(conn)
+        conn.commit()
+
         if current_user["role"] == "student":
             enrollment = conn.execute(
                 text("""
@@ -139,33 +160,52 @@ def create_custom_mode(
     request: CustomModeCreate,
     current_user: dict = Depends(require_role(["instructor"]))
 ):
+    cooldown_value = max(0, request.defaultCooldownStrategy)
+    # Keep compatibility with old UI values (seconds) and DB check (0/1/2).
+    if cooldown_value == 0:
+        cooldown_strategy = 0
+    elif cooldown_value <= 30:
+        cooldown_strategy = 1
+    else:
+        cooldown_strategy = 2
+
+    strict_level = min(2, max(0, request.strictLevel))
+
     with engine.connect() as conn:
-        new_type = conn.execute(
-            text("""
-                INSERT INTO exercisestype (
-                    typeid, name, description, defaulthintlimit,
-                    defaultcooldownstrategy, strictlevel, guidancestyle,
-                    anticipatedmisconceptions, issystempresent, category
-                )
-                VALUES (
-                    uuid_generate_v4(), :name, :description, :hintlimit,
-                    :cooldown, :strictlevel, :guidancestyle,
-                    :misconceptions, FALSE, :category
-                )
-                RETURNING typeid
-            """),
-            {
-                "name": request.name,
-                "description": request.description,
-                "hintlimit": request.defaultHintLimit,
-                "cooldown": request.defaultCooldownStrategy,
-                "strictlevel": request.strictLevel,
-                "guidancestyle": request.guidanceStyle,
-                "misconceptions": request.anticipatedMisconceptions,
-                "category": request.category,
-            }
-        ).fetchone()
-        conn.commit()
+        ensure_exercisestype_schema_compat(conn)
+
+        try:
+            new_type = conn.execute(
+                text("""
+                    INSERT INTO exercisestype (
+                        typeid, name, description, defaulthintlimit,
+                        defaultcooldownstrategy, strictlevel, guidancestyle,
+                        anticipatedmisconceptions, issystempresent, category
+                    )
+                    VALUES (
+                        uuid_generate_v4(), :name, :description, :hintlimit,
+                        :cooldown, :strictlevel, :guidancestyle,
+                        :misconceptions, FALSE, :category
+                    )
+                    RETURNING typeid
+                """),
+                {
+                    "name": request.name.strip(),
+                    "description": (request.description or "").strip(),
+                    "hintlimit": max(0, request.defaultHintLimit),
+                    "cooldown": cooldown_strategy,
+                    "strictlevel": strict_level,
+                    "guidancestyle": request.guidanceStyle,
+                    "misconceptions": request.anticipatedMisconceptions,
+                    "category": request.category,
+                }
+            ).fetchone()
+            conn.commit()
+        except IntegrityError as exc:
+            conn.rollback()
+            if "exercisestype_name_key" in str(exc):
+                raise HTTPException(status_code=409, detail="Mode name already exists. Choose a different name.")
+            raise HTTPException(status_code=400, detail=f"Mode creation failed due to database constraints: {str(exc.orig)}")
 
     return {
         "message": "Custom mode created successfully",
@@ -279,6 +319,41 @@ def create_exercise(
     }
 
 
+@router.delete("/{exercise_id}")
+def delete_exercise(
+    exercise_id: str,
+    current_user: dict = Depends(require_role(["instructor", "admin"]))
+):
+    with engine.connect() as conn:
+        exercise = conn.execute(
+            text("""
+                SELECT e.exerciseid, e.courseid, c.instructorid
+                FROM exercise e
+                JOIN courses c ON e.courseid = c.courseid
+                WHERE e.exerciseid = :exercise_id
+            """),
+            {"exercise_id": exercise_id}
+        ).fetchone()
+
+        if not exercise:
+            raise HTTPException(status_code=404, detail="Exercise not found")
+
+        if current_user["role"] == "instructor" and str(exercise[2]) != str(current_user["userid"]):
+            raise HTTPException(status_code=403, detail="Not allowed to delete this exercise")
+
+        conn.execute(
+            text("DELETE FROM exercise WHERE exerciseid = :exercise_id"),
+            {"exercise_id": exercise_id}
+        )
+        conn.commit()
+
+    return {
+        "message": "Exercise deleted successfully",
+        "exerciseId": exercise_id,
+        "courseId": str(exercise[1]),
+    }
+
+
 # ── MUST BE LAST — catches any /{exercise_id} ─────────────────────────────
 
 @router.get("/{exercise_id}")
@@ -287,6 +362,9 @@ def get_exercise(
     current_user: dict = Depends(get_current_user)
 ):
     with engine.connect() as conn:
+        purge_expired_exercises(conn)
+        conn.commit()
+
         exercise = conn.execute(
             text("""
                 SELECT exerciseid, courseid, title, difficultylevel, exercisetype,

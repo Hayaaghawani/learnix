@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
-import { Plus, Loader2 } from "lucide-react"
+import { Plus, Loader2, Trash2 } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
@@ -12,6 +12,7 @@ function CourseExercises() {
   const [customModes, setCustomModes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     fetchExercises()
@@ -66,12 +67,54 @@ function CourseExercises() {
     (e.exerciseType || "").toLowerCase() === "professional"
   )
 
+  const handleDeleteExercise = async (event, exercise) => {
+    event.stopPropagation()
+
+    const confirmed = window.confirm(`Delete "${exercise.title}"? This cannot be undone.`)
+    if (!confirmed) return
+
+    try {
+      setDeletingId(exercise.exerciseId)
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("No authentication token found")
+        return
+      }
+
+      const response = await fetch(`${API_BASE_URL}/exercises/${exercise.exerciseId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.detail || "Failed to delete exercise")
+      }
+
+      setExercises((prev) => prev.filter((e) => e.exerciseId !== exercise.exerciseId))
+    } catch (err) {
+      setError(err.message || "Failed to delete exercise. Please try again.")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const ExerciseCard = ({ exercise }) => (
     <div
       className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm cursor-pointer hover:bg-gray-100 transition"
       onClick={() => navigate(`/exercise/${exercise.exerciseId}/workspace`)}
     >
-      <h3 className="font-medium">{exercise.title}</h3>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-medium">{exercise.title}</h3>
+        <button
+          onClick={(e) => handleDeleteExercise(e, exercise)}
+          disabled={deletingId === exercise.exerciseId}
+          className="text-red-500 hover:text-red-700 disabled:opacity-50"
+          title="Delete exercise"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
       <p className="text-sm text-gray-500 mt-1">
         {exercise.keyConcept || "No description"}
       </p>
@@ -174,20 +217,7 @@ function CourseExercises() {
                   <p className="text-gray-400 text-sm">No exercises yet</p>
                 ) : (
                   modeExercises.map((exercise) => (
-                    <div
-                      key={exercise.exerciseId}
-                      className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm cursor-pointer hover:bg-gray-100 transition"
-                      onClick={() => navigate(`/exercise/${exercise.exerciseId}/workspace`)}
-                    >
-                      <h3 className="font-medium">{exercise.title}</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {exercise.keyConcept || "No description"}
-                      </p>
-                      <div className="flex justify-between text-xs text-gray-400 mt-2">
-                        <span>Difficulty: {exercise.difficultyLevel}</span>
-                        <span>Due: {new Date(exercise.dueDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
+                    <ExerciseCard key={exercise.exerciseId} exercise={exercise} />
                   ))
                 )}
               </div>

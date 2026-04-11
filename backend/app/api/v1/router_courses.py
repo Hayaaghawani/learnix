@@ -8,6 +8,16 @@ from app.api.v1.router_auth import get_current_user, require_role
 router = APIRouter(prefix="/courses", tags=["Courses"])
 
 
+def purge_expired_courses(conn):
+    # Remove completed courses immediately (past end date).
+    conn.execute(
+        text("""
+            DELETE FROM courses
+            WHERE enddate < CURRENT_DATE
+        """)
+    )
+
+
 class CourseCreate(BaseModel):
     courseName: str
     description: str | None = None
@@ -24,6 +34,9 @@ class JoinCourseRequest(BaseModel):
 @router.get("/my")
 def get_my_courses(current_user: dict = Depends(get_current_user)):
     with engine.connect() as conn:
+        purge_expired_courses(conn)
+        conn.commit()
+
         if current_user["role"] == "instructor":
             result = conn.execute(
                 text("""
@@ -81,6 +94,9 @@ def get_my_courses(current_user: dict = Depends(get_current_user)):
 @router.get("/{course_id}")
 def get_course(course_id: str, current_user: dict = Depends(get_current_user)):
     with engine.connect() as conn:
+        purge_expired_courses(conn)
+        conn.commit()
+
         course = conn.execute(
             text("""
                 SELECT courseid, coursename, description, languageused, startdate, enddate, instructorid
@@ -175,6 +191,9 @@ def join_course(
     instructor_username = join_key[:-36].lower()
 
     with engine.connect() as conn:
+        purge_expired_courses(conn)
+        conn.commit()
+
         course = conn.execute(
             text("""
                 SELECT c.courseid, c.coursename
