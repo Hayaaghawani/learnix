@@ -11,6 +11,8 @@ import {
   Cell
 } from "recharts"
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+
 function AdminDashboard() {
 
   const [users, setUsers] = useState([])
@@ -25,98 +27,123 @@ function AdminDashboard() {
     hintLimit: 5,
     executionTimeout: 5
   })
+  const [error, setError] = useState("")
+  const [notice, setNotice] = useState("")
 
   const COLORS = ["#8B5CF6", "#A78BFA"]
 
- useEffect(() => {
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token")
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }
+  }
 
-  setStats({
-    users: 120,
-    students: 95,
-    instructors: 12,
-    courses: 18
-  })
+  const parseResponse = async (res, fallbackMessage) => {
+    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(data?.detail || fallbackMessage)
+    }
+    return data
+  }
 
-  setUsers([
-    { id:1, name:"Ahmad Ali", email:"ahmad@psut.edu", role:"Student", active:true },
-    { id:2, name:"Dr. Sara", email:"sara@psut.edu", role:"Instructor", active:true }
-  ])
+  useEffect(() => {
+    const loadData = async () => {
+      setError("")
+      try {
+        await Promise.all([fetchStats(), fetchUsers(), fetchCourses(), fetchLogs()])
+      } catch (err) {
+        setError(err.message || "Failed to load admin dashboard data.")
+      }
+    }
 
-  setCourses([
-    { id:1, name:"CS1 Programming", instructor:"Dr. Sara", students:40, status:"Active" }
-  ])
-
-  setLogs([
-    { message:"Student requested too many hints" },
-    { message:"Possible plagiarism detected" }
-  ])
-
-}, [])
+    loadData()
+  }, [])
 
   const fetchStats = async () => {
-    const res = await fetch("/api/admin/stats")
-    const data = await res.json()
+    const res = await fetch(`${API_BASE_URL}/admin/stats`, {
+      headers: getAuthHeaders(),
+    })
+    const data = await parseResponse(res, "Failed to load stats")
     setStats(data)
   }
 
   const fetchUsers = async () => {
-    const res = await fetch("/api/admin/users")
-    const data = await res.json()
-    setUsers(data)
+    const res = await fetch(`${API_BASE_URL}/admin/users`, {
+      headers: getAuthHeaders(),
+    })
+    const data = await parseResponse(res, "Failed to load users")
+    setUsers(data.users || [])
   }
 
   const fetchCourses = async () => {
-    const res = await fetch("/api/admin/courses")
-    const data = await res.json()
-    setCourses(data)
+    const res = await fetch(`${API_BASE_URL}/admin/courses`, {
+      headers: getAuthHeaders(),
+    })
+    const data = await parseResponse(res, "Failed to load courses")
+    setCourses(data.courses || [])
   }
 
   const fetchLogs = async () => {
-    const res = await fetch("/api/admin/logs")
-    const data = await res.json()
-    setLogs(data)
+    const res = await fetch(`${API_BASE_URL}/admin/logs`, {
+      headers: getAuthHeaders(),
+    })
+    const data = await parseResponse(res, "Failed to load logs")
+    setLogs(data.logs || [])
   }
 
   const sendInvite = async () => {
     if (!inviteEmail) return
 
-    await fetch("/api/admin/invite-user", {
+    const res = await fetch(`${API_BASE_URL}/admin/invite-user`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         email: inviteEmail,
-        role: inviteRole
+        role: inviteRole.toLowerCase()
       })
     })
 
+    const data = await parseResponse(res, "Failed to invite user")
+
     setInviteEmail("")
-    fetchUsers()
+    setNotice(`Invite sent. Temporary password: ${data.temporaryPassword}`)
+    await Promise.all([fetchUsers(), fetchStats()])
   }
 
   const toggleUserStatus = async (id, active) => {
-    await fetch(`/api/admin/user/${id}/status`, {
+    const res = await fetch(`${API_BASE_URL}/admin/user/${id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ active: !active })
     })
 
-    fetchUsers()
+    await parseResponse(res, "Failed to update user status")
+
+    await fetchUsers()
   }
 
   const deleteUser = async (id) => {
-    await fetch(`/api/admin/user/${id}`, {
-      method: "DELETE"
+    const res = await fetch(`${API_BASE_URL}/admin/user/${id}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
     })
 
-    fetchUsers()
+    await parseResponse(res, "Failed to delete user")
+
+    await Promise.all([fetchUsers(), fetchStats()])
   }
 
   const saveSettings = async () => {
-    await fetch("/api/admin/settings", {
+    const res = await fetch(`${API_BASE_URL}/admin/settings`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify(settings)
     })
+
+    await parseResponse(res, "Failed to save settings")
+    setNotice("Settings saved")
   }
 
   const userChart = [
@@ -130,6 +157,18 @@ function AdminDashboard() {
       <h1 className="text-3xl font-bold text-purple-600">
         Admin Dashboard
       </h1>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {notice}
+        </div>
+      )}
 
       {/* SYSTEM OVERVIEW */}
 
