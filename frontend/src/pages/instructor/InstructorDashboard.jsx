@@ -10,10 +10,22 @@ function InstructorDashboard() {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch (e) {
+        console.warn("Unable to parse stored user:", e)
+      }
+    }
+
     fetchCourses()
   }, [])
+
+  const instructorUsername = user?.email?.split("@")[0]?.toLowerCase() || ""
 
   const fetchCourses = async () => {
     setLoading(true)
@@ -167,9 +179,17 @@ function InstructorDashboard() {
                 className="bg-white p-6 rounded-xl shadow hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] transition duration-300 cursor-pointer"
               >
                 <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-semibold">
-                    {course.courseName}
-                  </h3>
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {course.courseName}
+                    </h3>
+                    
+                    {instructorUsername && (
+                      <p className="text-xs text-gray-400 mt-1 break-all">
+                        Join Code: {`${instructorUsername}${course.courseId}`}
+                      </p>
+                    )}
+                  </div>
                   <Trash2
                     size={18}
                     className="text-red-500 cursor-pointer hover:text-red-700"

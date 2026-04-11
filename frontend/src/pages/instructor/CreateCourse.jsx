@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
@@ -6,6 +6,25 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000
 function CreateCourse() {
 
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (!storedUser) {
+      navigate("/")
+      return
+    }
+
+    try {
+      const parsedUser = JSON.parse(storedUser)
+      if (parsedUser.role !== "instructor") {
+        alert("Only instructors can create courses. Please log in with an instructor account.")
+        navigate("/")
+      }
+    } catch (e) {
+      console.error("Failed to parse user data", e)
+      navigate("/")
+    }
+  }, [navigate])
 
   const [gradingType, setGradingType] = useState("first-second-final")
 
@@ -86,8 +105,24 @@ function CreateCourse() {
     }
 
     const token = localStorage.getItem("token")
+    const storedUser = localStorage.getItem("user")
+    let parsedUser = null
+
+    if (storedUser) {
+      try {
+        parsedUser = JSON.parse(storedUser)
+      } catch (e) {
+        console.error("Invalid stored user data", e)
+      }
+    }
+
     if (!token) {
       setError("You must be logged in to create a course")
+      return
+    }
+
+    if (!parsedUser || parsedUser.role !== "instructor") {
+      setError("Only instructors can create courses. Please log in as an instructor.")
       return
     }
 

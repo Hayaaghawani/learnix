@@ -10,6 +10,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard"
 
 import StudentCoursePage from "./pages/student/StudentCoursePage"
 import StudentReport from "./pages/student/StudentReport"
+import StudentNotifications from "./pages/student/StudentNotifications"
+import JoinCourse from "./pages/student/JoinCourse"
 
 import CreateCourse from "./pages/instructor/CreateCourse"
 import CreateExercise from "./pages/instructor/exercise/CreateExercise"
@@ -44,6 +46,8 @@ function App() {
         <Route path="/student" element={<StudentDashboard />} />
         <Route path="/student/course/:courseId" element={<StudentCoursePage />} />
         <Route path="/student/course/:courseId/report" element={<StudentReport />} />
+        <Route path="/student/notifications" element={<StudentNotifications />} />
+        <Route path="/join-course/:joinKey" element={<JoinCourse />} />
 
         {/* Instructor Dashboard */}
         <Route path="/instructor" element={<InstructorDashboard />} />

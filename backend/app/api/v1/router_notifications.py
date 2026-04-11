@@ -1,40 +1,114 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import text
 from app.core.database import engine
 from app.api.v1.router_auth import get_current_user
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
+# Pydantic model for sending notifications
+class SendNotificationRequest(BaseModel):
+    recipientEmail: str
+    title: str
+    message: str
+
 @router.get("/my")
 #Get my notifications
 def get_my_notifications(current_user: dict = Depends(get_current_user)):
+    print(f"Getting notifications for user: {current_user['userid']} (email: {current_user.get('email', 'unknown')})")
+
     with engine.connect() as conn:
         result = conn.execute(
             text("""
-                SELECT notificationid, userid, message, isread, createdat
-                FROM notifications
-                WHERE userid = :userid
-                ORDER BY createdat DESC
+                SELECT n.notificationid, n.userid, n.senderid, n.title, n.message, n.isread, n.createdat,
+                       u.firstname, u.lastname, u.email
+                FROM notifications n
+                JOIN users u ON n.senderid = u.userid
+                WHERE n.userid = :userid
+                ORDER BY n.createdat DESC
             """),
-            {"userid": current_user["userid"]}#Get user ID from token
+            {"userid": current_user["userid"]}
         ).fetchall()
+
+    print(f"Found {len(result)} notifications for user {current_user['userid']}")
 
     notifications = []
     for row in result:
-        #convert data from DB to JSON
         notifications.append({
             "notificationId": str(row[0]),
             "userId": str(row[1]),
-            "message": row[2],
-            "isRead": row[3],
-            "createdAt": row[4]
+            "senderId": str(row[2]),
+            "title": row[3],
+            "message": row[4],
+            "isRead": row[5],
+            "createdAt": row[6],
+            "senderFirstName": row[7],
+            "senderLastName": row[8],
+            "senderEmail": row[9]
         })
-# Return NOTIFICATION response related to the user
+
     return {
         "message": "Notifications retrieved successfully",
         "count": len(notifications),
         "notifications": notifications
     }
+
+# Send notification to a specific student by email
+@router.post("/send")
+def send_notification(
+    request: SendNotificationRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    # Only instructors can send notifications
+    if current_user.get("role") != "instructor":
+        raise HTTPException(status_code=403, detail="Only instructors can send notifications")
+
+    try:
+        print(f"Instructor {current_user['userid']} sending notification to: {request.recipientEmail}")
+
+        with engine.connect() as conn:
+            # Find the student by email (case-insensitive)
+            student = conn.execute(
+                text("""
+                    SELECT userid, email, role
+                    FROM users
+                    WHERE LOWER(email) = LOWER(:email) AND role = 'student'
+                """),
+                {"email": request.recipientEmail}
+            ).fetchone()
+
+            if not student:
+                print(f"Student not found with email: {request.recipientEmail}")
+                raise HTTPException(status_code=404, detail="Student with this email not found")
+
+            print(f"Found student: {student[0]} (email: {student[1]})")
+
+            # Create notification record with proper transaction
+            conn.execute(
+                text("""
+                    INSERT INTO notifications (userid, senderid, title, message, isread, createdat)
+                    VALUES (:userid, :senderid, :title, :message, FALSE, CURRENT_TIMESTAMP)
+                """),
+                {
+                    "userid": str(student[0]),
+                    "senderid": str(current_user["userid"]),
+                    "title": request.title,
+                    "message": request.message
+                }
+            )
+            conn.commit()
+
+            print(f"Notification inserted successfully for student {student[0]} from instructor {current_user['userid']}")
+
+        return {
+            "message": "Notification sent successfully",
+            "recipientEmail": request.recipientEmail
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error sending notification: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to send notification: {str(e)}")
 
 
 #marking the notification as read, even in the database 

@@ -8,3 +8,21 @@ npm install -D tailwindcss postcss autoprefixer
 npx tailwindcss init -p
 npm install -D eslint @eslint/js eslint-plugin-react-hooks eslint-plugin-react-refresh globals
 npm install -D @vitejs/plugin-react vite
+ALTER TABLE exercisestype ALTER COLUMN guidancestyle TYPE text;
+ALTER TABLE exercisestype ALTER COLUMN anticipatedmisconceptions TYPE text;
+ALTER TABLE exercisestype ALTER COLUMN category TYPE text;
+
+ALTER TABLE exercise ALTER COLUMN title TYPE character varying(100);
+ALTER TABLE exercise ALTER COLUMN problem TYPE character varying(500);
+ALTER TABLE exercise ALTER COLUMN referencesolution TYPE character varying(500);
+
+ALTER TABLE exercisestype 
+DROP CONSTRAINT exercisestype_defaultcooldownstrategy_check;
+
+ALTER TABLE material 
+ADD COLUMN courseid uuid REFERENCES courses(courseid) ON DELETE CASCADE,
+ADD COLUMN title character varying(100),
+ADD COLUMN filetype character varying(20),
+ADD COLUMN filename character varying(200),
+ADD COLUMN uploadedby uuid REFERENCES users(userid),
+ADD COLUMN createdat timestamp DEFAULT CURRENT_TIMESTAMP;
