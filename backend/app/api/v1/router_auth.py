@@ -1,4 +1,5 @@
 # libraries
+from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Request, Depends
 from passlib.context import CryptContext
 from sqlalchemy import text
@@ -214,3 +215,30 @@ def instructor_only(current_user: dict = Depends(require_role(["instructor"]))):
 @router.get("/student-only")
 def student_only(current_user: dict = Depends(require_role(["student"]))):
     return {"message": "Welcome student"}
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    newPassword: str
+
+@router.post("/reset-password")
+def reset_password(request: ResetPasswordRequest):
+    with engine.connect() as conn:
+        user = conn.execute(
+            text("SELECT userid FROM users WHERE LOWER(email) = LOWER(:email)"),
+            {"email": request.email.strip()}
+        ).fetchone()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="No account found with this email.")
+
+        if len(request.newPassword) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+
+        new_hash = hash_password(request.newPassword)
+        conn.execute(
+            text("UPDATE users SET password = :password WHERE userid = :userid"),
+            {"password": new_hash, "userid": user[0]}
+        )
+        conn.commit()
+
+    return {"message": "Password reset successfully."}

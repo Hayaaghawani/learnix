@@ -123,7 +123,9 @@ function InstructorDashboard() {
             <Bell size={20}/>
           </div>
 
-          <div className="bg-white text-[#6E5C86] w-10 h-10 flex items-center justify-center rounded-full font-semibold cursor-pointer hover:scale-105 transition">
+          <div 
+          onClick={() => navigate("/profile")} 
+          className="bg-white text-[#6E5C86] w-10 h-10 flex items-center justify-center rounded-full font-semibold cursor-pointer hover:scale-105 transition">
             AA
           </div>
 

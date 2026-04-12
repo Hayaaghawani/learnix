@@ -1,4 +1,3 @@
-# backend/app/api/__init__.py
 from app.api.v1 import (
     auth_router,
     admin_router,
@@ -6,6 +5,7 @@ from app.api.v1 import (
     courses_router,
     exercises_router,
     notifications_router,
+    material_router,
 )
 
 __all__ = [
@@ -15,4 +15,5 @@ __all__ = [
     "courses_router",
     "exercises_router",
     "notifications_router",
+    "material_router",
 ]

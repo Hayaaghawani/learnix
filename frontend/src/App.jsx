@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import Navbar from "./components/Navbar"
 
 import Login from "./pages/Login"
+import ForgotPassword from "./pages/ForgotPassword"
+import ProfilePage from "./pages/ProfilePage"
 
 import InstructorDashboard from "./pages/instructor/InstructorDashboard"
 import StudentDashboard from "./pages/student/StudentDashboard"
@@ -29,59 +31,40 @@ import About from "./pages/AboutPage"
 import Contact from "./pages/ContactPage"
 import Privacy from "./pages/PrivacyPage"
 
-
-
-
 function App() {
   return (
     <>
       <Navbar />
-
       <Routes>
-
-        {/* Login */}
         <Route path="/" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/profile" element={<ProfilePage />} />
 
-        {/* Student */}
         <Route path="/student" element={<StudentDashboard />} />
         <Route path="/student/course/:courseId" element={<StudentCoursePage />} />
         <Route path="/student/course/:courseId/report" element={<StudentReport />} />
         <Route path="/student/notifications" element={<StudentNotifications />} />
         <Route path="/join-course/:joinKey" element={<JoinCourse />} />
 
-        {/* Instructor Dashboard */}
         <Route path="/instructor" element={<InstructorDashboard />} />
         <Route path="/instructor/create-course" element={<CreateCourse />} />
         <Route path="/instructor/notifications" element={<Notifications />} />
-
-        {/* Create Exercise Page */}
         <Route path="/instructor/exercise/create/:id" element={<CreateExercise />} />
 
-        {/* Course Workspace with Sidebar */}
+        <Route path="/instructor/course/:id/*" element={<CourseLayout />}>
+          <Route index element={<Navigate to="exercises" />} />
+          <Route path="exercises" element={<CourseExercises />} />
+          <Route path="students" element={<CourseStudents />} />
+          <Route path="material" element={<CourseMaterial />} />
+          <Route path="ai" element={<AIModes />} />
+          <Route path="analytics" element={<CourseAnalytics />} />
+        </Route>
 
-
-          {/* Default page */}
-         <Route path="/instructor/course/:id/*" element={<CourseLayout />}>
-
-  <Route index element={<Navigate to="exercises" />} />
-
-  <Route path="exercises" element={<CourseExercises />} />
-  <Route path="students" element={<CourseStudents />} />
-  <Route path="material" element={<CourseMaterial />} />
-  <Route path="ai" element={<AIModes />} />
-  <Route path="analytics" element={<CourseAnalytics />} />
-
-</Route>
-
-        {/* Admin */}
+        <Route path="/exercise/:id/workspace" element={<ExerciseWorkspace />} />
         <Route path="/admin" element={<AdminDashboard />} />
-
-        {/* Static Pages */}
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/privacy" element={<Privacy />} />
-
-<Route path="/exercise/:id/workspace" element={<ExerciseWorkspace />} />
       </Routes>
     </>
   )

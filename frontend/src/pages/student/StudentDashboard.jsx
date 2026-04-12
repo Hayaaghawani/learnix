@@ -243,7 +243,7 @@ function StudentDashboard() {
 
           {/* Profile initials circle — same style as instructor AA */}
           <div
-            onClick={() => navigate("/student/profile")}
+            onClick={() => navigate("/profile")}
             className="bg-white text-[#6E5C86] w-10 h-10 flex items-center justify-center rounded-full font-semibold cursor-pointer hover:scale-105 transition"
             title="Profile"
           >
