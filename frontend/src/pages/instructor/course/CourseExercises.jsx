@@ -10,10 +10,10 @@ function CourseExercises() {
 
   const [exercises, setExercises] = useState([])
   const [customModes, setCustomModes] = useState([])
+  const [exerciseTypes, setExerciseTypes] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
-  const [deleteTarget, setDeleteTarget] = useState(null) // exercise to confirm delete
 
   useEffect(() => {
     fetchExercises()
@@ -51,12 +51,38 @@ function CourseExercises() {
       })
       if (!response.ok) return
       const data = await response.json()
-      setCustomModes((data.types || []).filter(t => !t.isSystemPresent))
+      const custom = (data.types || []).filter(t => !t.isSystemPresent)
+      setCustomModes(custom)
+      
+      // Update all modes to include custom ones
+      const customModeObjects = custom.map(mode => ({
+        typeId: mode.typeId,
+        name: mode.name.toUpperCase(),
+        isSystem: false
+      }))
+      setAllModes(prev => [...prev, ...customModeObjects])
     } catch {}
   }
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return
+  const beginnerExercises = exercises.filter(e =>
+    (e.exerciseType || "").toLowerCase() === "beginner"
+  )
+  const intermediateExercises = exercises.filter(e =>
+    (e.exerciseType || "").toLowerCase() === "intermediate"
+  )
+  const seniorExercises = exercises.filter(e =>
+    (e.exerciseType || "").toLowerCase() === "senior"
+  )
+  const professionalExercises = exercises.filter(e =>
+    (e.exerciseType || "").toLowerCase() === "professional"
+  )
+
+  const handleDeleteExercise = async (event, exercise) => {
+    event.stopPropagation()
+
+    const confirmed = window.confirm(`Delete "${exercise.title}"? This cannot be undone.`)
+    if (!confirmed) return
+
     try {
       setDeletingId(deleteTarget.exerciseId)
       const token = localStorage.getItem("token")
@@ -190,6 +216,7 @@ function CourseExercises() {
       ) : (
         <div className="grid grid-cols-3 gap-6">
 
+          {/* BEGINNER */}
           <div className="bg-white p-6 rounded-xl shadow">
             <h2 className="font-semibold mb-4 text-[#6E5C86]">BEGINNER</h2>
             {beginnerExercises.length === 0 ? (
@@ -201,6 +228,7 @@ function CourseExercises() {
             )}
           </div>
 
+          {/* INTERMEDIATE */}
           <div className="bg-white p-6 rounded-xl shadow">
             <h2 className="font-semibold mb-4 text-[#6E5C86]">INTERMEDIATE</h2>
             {intermediateExercises.length === 0 ? (
@@ -212,6 +240,7 @@ function CourseExercises() {
             )}
           </div>
 
+          {/* SENIOR */}
           <div className="bg-white p-6 rounded-xl shadow">
             <h2 className="font-semibold mb-4 text-[#6E5C86]">SENIOR</h2>
             {seniorExercises.length === 0 ? (
@@ -223,6 +252,7 @@ function CourseExercises() {
             )}
           </div>
 
+          {/* PROFESSIONAL */}
           <div className="bg-white p-6 rounded-xl shadow">
             <h2 className="font-semibold mb-4 text-[#6E5C86]">PROFESSIONAL</h2>
             {professionalExercises.length === 0 ? (
@@ -234,15 +264,14 @@ function CourseExercises() {
             )}
           </div>
 
+          {/* CUSTOM MODES — one column per custom mode, always visible */}
           {customModes.map((mode) => {
             const modeExercises = exercises.filter(e =>
               (e.exerciseType || "").toLowerCase() === mode.name.toLowerCase()
             )
             return (
               <div key={mode.typeId} className="bg-white p-6 rounded-xl shadow">
-                <h2 className="font-semibold mb-4 text-[#6E5C86]">
-                  {mode.name.toUpperCase()}
-                </h2>
+                <h2 className="font-semibold mb-4 text-[#6E5C86]">{mode.name}</h2>
                 {modeExercises.length === 0 ? (
                   <p className="text-gray-400 text-sm">No exercises yet</p>
                 ) : (
