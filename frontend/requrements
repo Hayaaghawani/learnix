@@ -26,3 +26,13 @@ ADD COLUMN filetype character varying(20),
 ADD COLUMN filename character varying(200),
 ADD COLUMN uploadedby uuid REFERENCES users(userid),
 ADD COLUMN createdat timestamp DEFAULT CURRENT_TIMESTAMP;
+
+
+
+ALTER TABLE testcases ADD COLUMN isvisible BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE exercise ALTER COLUMN keyconcept TYPE text;
+
+ALTER TABLE exercise DROP CONSTRAINT exercise_check;
+
+ALTER TABLE exercise ADD CONSTRAINT exercise_check CHECK (duedate >= CURRENT_DATE);

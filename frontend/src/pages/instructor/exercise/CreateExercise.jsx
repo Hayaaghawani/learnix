@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom"
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Trash2, Loader2 } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
@@ -12,7 +12,6 @@ function CreateExercise() {
 
   const [activeTab, setActiveTab] = useState("details")
 
-  // Form state
   const [title, setTitle] = useState("")
   const [problemStatement, setProblemStatement] = useState("")
   const [aiMode, setAiMode] = useState("beginner")
@@ -21,14 +20,12 @@ function CreateExercise() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // AI modes — default + custom from DB
   const [availableModes, setAvailableModes] = useState([
     { value: "beginner", label: "Beginner — Full hints allowed" },
     { value: "intermediate", label: "Intermediate — Partial hints only" },
     { value: "senior", label: "Senior — Minimal guidance" },
     { value: "professional", label: "Professional — No AI help" },
   ])
-
 
   useEffect(() => {
     const fetchModes = async () => {
@@ -51,17 +48,25 @@ function CreateExercise() {
   }, [id])
 
   // Test cases
-  const [testCases, setTestCases] = useState([{ input: "", output: "" }])
+  const [testCases, setTestCases] = useState([{ input: "", output: "", isVisible: true }])
 
   const addTestCase = () => {
-    if (testCases.length < 3) setTestCases([...testCases, { input: "", output: "" }])
+    setTestCases([...testCases, { input: "", output: "", isVisible: true }])
   }
+
   const removeTestCase = (index) => {
     if (testCases.length > 1) setTestCases(testCases.filter((_, i) => i !== index))
   }
+
   const updateTestCase = (index, field, value) => {
     const updated = [...testCases]
     updated[index][field] = value
+    setTestCases(updated)
+  }
+
+  const toggleVisibility = (index) => {
+    const updated = [...testCases]
+    updated[index].isVisible = !updated[index].isVisible
     setTestCases(updated)
   }
 
@@ -81,7 +86,6 @@ function CreateExercise() {
       .map((tc, i) => `Case ${i + 1}: expected output = "${tc.output}"`)
       .join("\n")
 
-     
     const prompt = `You are a code evaluator. The programming exercise is:
 "${problemStatement || "(no problem statement)"}"
 
@@ -119,13 +123,15 @@ Reply ONLY in this exact JSON format with no extra text:
     }
   }
 
-  // Save exercise
   const saveExercise = async () => {
     if (title.trim().length > 100) { setError("Title must be under 100 characters"); return }
     if (!title.trim()) { setError("Exercise title is required"); return }
     if (!problemStatement.trim()) { setError("Problem statement is required"); return }
     if (!solution.trim()) { setError("Canonical solution is required"); return }
     if (!dueDate) { setError("Due date is required"); return }
+
+    const validTestCases = testCases.filter(tc => tc.output.trim())
+    if (validTestCases.length === 0) { setError("At least one test case is required"); return }
 
     setLoading(true)
     setError("")
@@ -152,9 +158,11 @@ Reply ONLY in this exact JSON format with no extra text:
           problem: problemStatement.trim(),
           referenceSolution: solution.trim(),
           dueDate: dueDate,
-          testCases: testCases
-            .filter(tc => tc.output.trim())
-            .map(tc => ({ input: tc.input, expectedOutput: tc.output }))
+          testCases: validTestCases.map(tc => ({
+            input: tc.input,
+            expectedOutput: tc.output,
+            isVisible: tc.isVisible,
+          }))
         })
       })
 
@@ -204,7 +212,6 @@ Reply ONLY in this exact JSON format with no extra text:
       {/* CONTENT AREA */}
       <div className="px-10 py-8">
 
-        {/* DETAILS TAB */}
         {activeTab === "details" && (
           <div className="bg-white p-8 rounded-xl shadow space-y-6 max-w-3xl mx-auto">
 
@@ -229,7 +236,6 @@ Reply ONLY in this exact JSON format with no extra text:
               />
             </div>
 
-            {/* AI Assistance Mode — now includes custom modes */}
             <div>
               <label className="font-medium block mb-2">AI Assistance Mode</label>
               <select
@@ -266,41 +272,53 @@ Reply ONLY in this exact JSON format with no extra text:
               />
             </div>
 
+            {/* Test Cases */}
             <div>
               <div className="flex justify-between items-center mb-3">
                 <label className="font-medium">
                   Test Cases{" "}
-                  <span className="text-gray-400 font-normal text-sm">(optional, max 3)</span>
+                  <span className="text-red-400 font-normal text-sm">(at least 1 required)</span>
                 </label>
-                {testCases.length < 3 && (
-                  <button
-                    onClick={addTestCase}
-                    className="flex items-center gap-1 text-sm text-[#6E5C86] hover:text-[#3e2764] font-medium"
-                  >
-                    <Plus size={14} /> Add
-                  </button>
-                )}
+                <button
+                  onClick={addTestCase}
+                  className="flex items-center gap-1 text-sm text-[#6E5C86] hover:text-[#3e2764] font-medium"
+                >
+                  <Plus size={14} /> Add
+                </button>
               </div>
               <div className="space-y-3">
                 {testCases.map((tc, index) => (
                   <div key={index} className="border rounded-lg p-4 bg-gray-50 space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-gray-500">Case {index + 1}</span>
-                      {testCases.length > 1 && (
-                        <button onClick={() => removeTestCase(index)} className="text-red-400 hover:text-red-600">
-                          <Trash2 size={14} />
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => toggleVisibility(index)}
+                          className={`text-xs px-2 py-1 rounded-full font-medium border transition-all ${
+                            tc.isVisible
+                              ? "bg-green-50 text-green-700 border-green-300"
+                              : "bg-gray-100 text-gray-500 border-gray-300"
+                          }`}
+                        >
+                          {tc.isVisible ? "👁 Visible" : "🔒 Hidden"}
                         </button>
-                      )}
+                        {testCases.length > 1 && (
+                          <button onClick={() => removeTestCase(index)} className="text-red-400 hover:text-red-600">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs text-gray-400 mb-1 block">Input</label>
-                        <input
-                          value={tc.input}
-                          onChange={(e) => updateTestCase(index, "input", e.target.value)}
-                          className="w-full border p-2 rounded-lg text-sm font-mono"
-                          placeholder="e.g. 1 2 3"
-                        />
+                        <textarea
+  value={tc.input}
+  onChange={(e) => updateTestCase(index, "input", e.target.value)}
+  className="w-full border p-2 rounded-lg text-sm font-mono"
+  placeholder={"e.g.\n3\n1 2 3"}
+  rows={3}
+/>
                       </div>
                       <div>
                         <label className="text-xs text-gray-400 mb-1 block">Expected Output</label>
@@ -344,7 +362,6 @@ Reply ONLY in this exact JSON format with no extra text:
           </div>
         )}
 
-        {/* PREVIEW TAB */}
         {activeTab === "preview" && (
           <div className="max-w-3xl mx-auto space-y-6">
 
@@ -369,14 +386,19 @@ Reply ONLY in this exact JSON format with no extra text:
                 </div>
                 {testCases.some(tc => tc.output.trim()) && (
                   <div className="pt-1">
-                    <p className="text-xs text-gray-400 mb-2">Test cases:</p>
+                    <p className="text-xs text-gray-400 mb-2">Visible test cases (student view):</p>
                     <div className="space-y-1">
-                      {testCases.filter(tc => tc.output.trim()).map((tc, i) => (
+                      {testCases.filter(tc => tc.output.trim() && tc.isVisible).map((tc, i) => (
                         <div key={i} className="font-mono text-xs bg-white border border-gray-200 px-3 py-1.5 rounded flex gap-4">
                           {tc.input && <span><span className="text-gray-400">in:</span> {tc.input}</span>}
                           <span><span className="text-gray-400">out:</span> {tc.output}</span>
                         </div>
                       ))}
+                      {testCases.filter(tc => tc.output.trim() && !tc.isVisible).length > 0 && (
+                        <div className="text-xs text-gray-400 italic px-1">
+                          + {testCases.filter(tc => tc.output.trim() && !tc.isVisible).length} hidden test case(s) used for judging only
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

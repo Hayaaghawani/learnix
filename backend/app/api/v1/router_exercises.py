@@ -10,7 +10,6 @@ router = APIRouter(prefix="/exercises", tags=["Exercises"])
 
 
 def purge_expired_exercises(conn):
-    # Remove exercises immediately after their due date passes.
     conn.execute(
         text("""
             DELETE FROM exercise
@@ -20,14 +19,16 @@ def purge_expired_exercises(conn):
 
 
 def ensure_exercisestype_schema_compat(conn):
-    # Keep compatibility with older databases where these columns are short VARCHAR.
     conn.execute(text("ALTER TABLE exercisestype ALTER COLUMN guidancestyle TYPE text"))
     conn.execute(text("ALTER TABLE exercisestype ALTER COLUMN anticipatedmisconceptions TYPE text"))
     conn.execute(text("ALTER TABLE exercisestype ALTER COLUMN category TYPE text"))
 
+
 class TestCaseCreate(BaseModel):
     input: str | None = None
     expectedOutput: str
+    isVisible: bool = True
+
 
 class ExerciseCreate(BaseModel):
     courseId: str
@@ -41,6 +42,7 @@ class ExerciseCreate(BaseModel):
     referenceSolution: str | None = None
     dueDate: str
     testCases: list[TestCaseCreate] = []
+
 
 class CustomModeCreate(BaseModel):
     name: str
@@ -161,7 +163,6 @@ def create_custom_mode(
     current_user: dict = Depends(require_role(["instructor"]))
 ):
     cooldown_value = max(0, request.defaultCooldownStrategy)
-    # Keep compatibility with old UI values (seconds) and DB check (0/1/2).
     if cooldown_value == 0:
         cooldown_strategy = 0
     elif cooldown_value <= 30:
@@ -212,6 +213,7 @@ def create_custom_mode(
         "typeId": str(new_type[0])
     }
 
+
 @router.delete("/types/{type_id}")
 def delete_custom_mode(
     type_id: str,
@@ -240,7 +242,8 @@ def delete_custom_mode(
         conn.commit()
 
     return {"message": "Mode deleted successfully", "typeId": type_id}
-    
+
+
 @router.post("/")
 def create_exercise(
     request: ExerciseCreate,
@@ -300,15 +303,16 @@ def create_exercise(
         for tc in request.testCases:
             conn.execute(
                 text("""
-                    INSERT INTO testcases (testcaseid, exerciseid, input, expectedoutput, weight)
-                    VALUES (:testcaseid, :exerciseid, :input, :expectedoutput, :weight)
+                    INSERT INTO testcases (testcaseid, exerciseid, input, expectedoutput, weight, isvisible)
+                    VALUES (:testcaseid, :exerciseid, :input, :expectedoutput, :weight, :isvisible)
                 """),
                 {
-                    "testcaseid": str(uuid.uuid4()),
-                    "exerciseid": str(new_exercise[0]),
-                    "input": tc.input or "",
+                    "testcaseid":     str(uuid.uuid4()),
+                    "exerciseid":     str(new_exercise[0]),
+                    "input":          tc.input or "",
                     "expectedoutput": tc.expectedOutput,
-                    "weight": 1.0
+                    "weight":         1.0,
+                    "isvisible":      tc.isVisible,
                 }
             )
         conn.commit()
@@ -355,6 +359,7 @@ def delete_exercise(
 
 
 # ── MUST BE LAST — catches any /{exercise_id} ─────────────────────────────
+
 @router.get("/{exercise_id}")
 def get_exercise(
     exercise_id: str,
@@ -399,10 +404,9 @@ def get_exercise(
             if not course or str(course[0]) != str(current_user["userid"]):
                 raise HTTPException(status_code=403, detail="Not allowed to access this exercise")
 
-        # ── Fetch test cases ──────────────────────────────
         test_cases = conn.execute(
             text("""
-                SELECT testcaseid, input, expectedoutput
+                SELECT testcaseid, input, expectedoutput, isvisible
                 FROM testcases
                 WHERE exerciseid = :exercise_id
             """),
@@ -427,9 +431,10 @@ def get_exercise(
         "userId": str(exercise[14]),
         "testCases": [
             {
-                "testCaseId": str(tc[0]),
-                "input": tc[1],
-                "expectedOutput": tc[2]
+                "testCaseId":     str(tc[0]),
+                "input":          tc[1],
+                "expectedOutput": tc[2],
+                "isVisible":      tc[3],
             }
             for tc in test_cases
         ],

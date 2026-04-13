@@ -33,11 +33,13 @@ function ExerciseWorkspace() {
       .then(data => {
         setProblem(data.problem || "")
         if (data.testCases) {
-          setTestCases(data.testCases.map(tc => ({
-            input: tc.input,
-            expected: tc.expectedOutput
-          })))
-        }
+  setTestCases(data.testCases
+    .filter(tc => tc.isVisible)  // only show visible ones
+    .map(tc => ({
+      input: tc.input,
+      expected: tc.expectedOutput
+    })))
+}
       })
       .catch(() => setProblem("Failed to load problem."))
 
@@ -80,9 +82,10 @@ function ExerciseWorkspace() {
       },
       body: JSON.stringify({ code, language, exercise_id: id }),
     })
-    const data = await res.json()
-    setScore(data.score ?? 0)
-    setOutput(`Passed ${data.passed ?? 0}/${data.total ?? 0} test cases — Score: ${data.score ?? 0}%`)
+   const data = await res.json()
+console.log("SUBMIT RESPONSE:", data)  // add this line
+setScore(data.score ?? 0)
+setOutput(`Passed ${data.passed ?? 0}/${data.total ?? 0} test cases — Score: ${data.score ?? 0}%`)
     setSubmissions(prev => [
       {
         attemptNumber: data.attempt_id?.slice(0, 8) ?? "?",
