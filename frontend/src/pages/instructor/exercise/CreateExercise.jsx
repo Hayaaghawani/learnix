@@ -21,14 +21,19 @@ function CreateExercise() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // AI modes — default + custom from DB
+  // AI modes — stores both mode info and typeId
   const [availableModes, setAvailableModes] = useState([
-    { value: "beginner", label: "Beginner — Full hints allowed" },
-    { value: "intermediate", label: "Intermediate — Partial hints only" },
-    { value: "senior", label: "Senior — Minimal guidance" },
-    { value: "professional", label: "Professional — No AI help" },
+    { value: "beginner", typeId: "7f39d2ca-4339-4e43-9cf1-f91f7df65bfe", label: "Beginner — Full hints allowed" },
+    { value: "intermediate", typeId: "05e54e91-3ddf-4547-96c2-225fecb7f227", label: "Intermediate — Partial hints only" },
+    { value: "senior", typeId: "b90a5a95-ff5e-4704-a361-bebed0853afe", label: "Senior — Minimal guidance" },
+    { value: "professional", typeId: "0e876aca-6ab8-4ed2-b499-5e0ddf6f6570", label: "Professional — No AI help" },
   ])
-
+  const [modeToTypeIdMap, setModeToTypeIdMap] = useState({
+    beginner: "7f39d2ca-4339-4e43-9cf1-f91f7df65bfe",
+    intermediate: "05e54e91-3ddf-4547-96c2-225fecb7f227",
+    senior: "b90a5a95-ff5e-4704-a361-bebed0853afe",
+    professional: "0e876aca-6ab8-4ed2-b499-5e0ddf6f6570"
+  })
 
   useEffect(() => {
     const fetchModes = async () => {
@@ -41,9 +46,12 @@ function CreateExercise() {
         const data = await response.json()
         const custom = (data.types || [])
           .filter(t => !t.isSystemPresent)
-          .map(t => ({ value: t.name.toLowerCase(), label: `${t.name} — Custom` }))
+          .map(t => ({ value: t.name.toLowerCase(), typeId: t.typeId, label: `${t.name} — Custom` }))
         if (custom.length > 0) {
           setAvailableModes(prev => [...prev, ...custom])
+          const newMap = { ...modeToTypeIdMap }
+          custom.forEach(m => { newMap[m.value] = m.typeId })
+          setModeToTypeIdMap(newMap)
         }
       } catch {}
     }
@@ -134,7 +142,13 @@ Reply ONLY in this exact JSON format with no extra text:
       const token = localStorage.getItem("token")
       if (!token) { setError("No authentication token found"); setLoading(false); return }
 
-      const typeId = "7f39d2ca-4339-4e43-9cf1-f91f7df65bfe"
+      // Get the correct typeId for the selected mode
+      const typeId = modeToTypeIdMap[aiMode]
+      if (!typeId) { 
+        setError("Invalid exercise mode selected"); 
+        setLoading(false); 
+        return; 
+      }
 
       const response = await fetch(`${API_BASE_URL}/exercises/`, {
         method: "POST",
@@ -147,8 +161,8 @@ Reply ONLY in this exact JSON format with no extra text:
           typeId: typeId,
           title: title.trim(),
           difficultyLevel: "Easy",
-          exerciseType: aiMode,
-          keyConcept: problemStatement.trim(),
+          exerciseType: "coding",
+          keyConcept: null,
           problem: problemStatement.trim(),
           referenceSolution: solution.trim(),
           dueDate: dueDate,

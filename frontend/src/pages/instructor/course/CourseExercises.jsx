@@ -10,9 +10,18 @@ function CourseExercises() {
 
   const [exercises, setExercises] = useState([])
   const [customModes, setCustomModes] = useState([])
+  const [exerciseTypes, setExerciseTypes] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+
+  // All available modes (predefined + custom)
+  const [allModes, setAllModes] = useState([
+    { typeId: "7f39d2ca-4339-4e43-9cf1-f91f7df65bfe", name: "BEGINNER", isSystem: true },
+    { typeId: "05e54e91-3ddf-4547-96c2-225fecb7f227", name: "INTERMEDIATE", isSystem: true },
+    { typeId: "b90a5a95-ff5e-4704-a361-bebed0853afe", name: "SENIOR", isSystem: true },
+    { typeId: "0e876aca-6ab8-4ed2-b499-5e0ddf6f6570", name: "PROFESSIONAL", isSystem: true }
+  ])
 
   useEffect(() => {
     fetchExercises()
@@ -50,22 +59,18 @@ function CourseExercises() {
       })
       if (!response.ok) return
       const data = await response.json()
-      setCustomModes((data.types || []).filter(t => !t.isSystemPresent))
+      const custom = (data.types || []).filter(t => !t.isSystemPresent)
+      setCustomModes(custom)
+      
+      // Update all modes to include custom ones
+      const customModeObjects = custom.map(mode => ({
+        typeId: mode.typeId,
+        name: mode.name.toUpperCase(),
+        isSystem: false
+      }))
+      setAllModes(prev => [...prev, ...customModeObjects])
     } catch {}
   }
-
-  const beginnerExercises = exercises.filter(e =>
-    (e.exerciseType || "").toLowerCase() === "beginner"
-  )
-  const intermediateExercises = exercises.filter(e =>
-    (e.exerciseType || "").toLowerCase() === "intermediate"
-  )
-  const seniorExercises = exercises.filter(e =>
-    (e.exerciseType || "").toLowerCase() === "senior"
-  )
-  const professionalExercises = exercises.filter(e =>
-    (e.exerciseType || "").toLowerCase() === "professional"
-  )
 
   const handleDeleteExercise = async (event, exercise) => {
     event.stopPropagation()
@@ -153,66 +158,13 @@ function CourseExercises() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${allModes.length <= 4 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
 
-          {/* BEGINNER */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h2 className="font-semibold mb-4 text-[#6E5C86]">BEGINNER</h2>
-            {beginnerExercises.length === 0 ? (
-              <p className="text-gray-400 text-sm">No exercises yet</p>
-            ) : (
-              beginnerExercises.map((exercise) => (
-                <ExerciseCard key={exercise.exerciseId} exercise={exercise} />
-              ))
-            )}
-          </div>
-
-          {/* INTERMEDIATE */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h2 className="font-semibold mb-4 text-[#6E5C86]">INTERMEDIATE</h2>
-            {intermediateExercises.length === 0 ? (
-              <p className="text-gray-400 text-sm">No exercises yet</p>
-            ) : (
-              intermediateExercises.map((exercise) => (
-                <ExerciseCard key={exercise.exerciseId} exercise={exercise} />
-              ))
-            )}
-          </div>
-
-          {/* SENIOR */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h2 className="font-semibold mb-4 text-[#6E5C86]">SENIOR</h2>
-            {seniorExercises.length === 0 ? (
-              <p className="text-gray-400 text-sm">No exercises yet</p>
-            ) : (
-              seniorExercises.map((exercise) => (
-                <ExerciseCard key={exercise.exerciseId} exercise={exercise} />
-              ))
-            )}
-          </div>
-
-          {/* PROFESSIONAL */}
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h2 className="font-semibold mb-4 text-[#6E5C86]">PROFESSIONAL</h2>
-            {professionalExercises.length === 0 ? (
-              <p className="text-gray-400 text-sm">No exercises yet</p>
-            ) : (
-              professionalExercises.map((exercise) => (
-                <ExerciseCard key={exercise.exerciseId} exercise={exercise} />
-              ))
-            )}
-          </div>
-
-          {/* CUSTOM MODES — one column per custom mode, always visible */}
-          {customModes.map((mode) => {
-            const modeExercises = exercises.filter(e =>
-              (e.exerciseType || "").toLowerCase() === mode.name.toLowerCase()
-            )
+          {allModes.map((mode) => {
+            const modeExercises = exercises.filter(e => e.typeId === mode.typeId)
             return (
               <div key={mode.typeId} className="bg-white p-6 rounded-xl shadow">
-                <h2 className="font-semibold mb-4 text-[#6E5C86]">
-                  {mode.name.toUpperCase()}
-                </h2>
+                <h2 className="font-semibold mb-4 text-[#6E5C86]">{mode.name}</h2>
                 {modeExercises.length === 0 ? (
                   <p className="text-gray-400 text-sm">No exercises yet</p>
                 ) : (
