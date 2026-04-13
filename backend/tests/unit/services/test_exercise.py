@@ -4,6 +4,12 @@ from sqlalchemy.exc import IntegrityError
 
 import app.api.v1.router_exercises as router_exercises
 
+
+@pytest.fixture(autouse=True)
+def _patch_schema_helpers(monkeypatch):
+    monkeypatch.setattr(router_exercises, "ensure_exercisestype_schema_compat", lambda c: None)
+    monkeypatch.setattr(router_exercises, "ensure_ai_configuration_schema", lambda c: None)
+
 #replace router_exercises.engine with MockEngine so that database interactions can be controlled and tested without relying on a real database. This allows us to simulate various scenarios and verify that the router_exercises functions behave correctly in each case.
 class MockResult:
     def __init__(self, fetchone_value=None, fetchall_value=None):
@@ -88,7 +94,7 @@ def test_purge_expired_exercises_executes_delete():
 #enrolled stud can see exercises
 def test_get_exercises_by_course_student_success(monkeypatch, student_user):
     rows = [
-        ("ex-1", "course-1", "Loops", "Easy", "coding", "loop", "vars", "Solve it", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
+        ("ex-1", "course-1", "Loops", "Easy", "coding", "vars", "Solve it", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
     ]
     conn = MockConnection(
         responses=[
@@ -123,7 +129,7 @@ def test_get_exercises_by_course_student_not_enrolled(monkeypatch, student_user)
 #course owner instructor can SEe exercises.
 def test_get_exercises_by_course_instructor_success(monkeypatch, instructor_user):
     rows = [
-        ("ex-1", "course-1", "Loops", "Easy", "coding", "loop", "vars", "Solve it", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
+        ("ex-1", "course-1", "Loops", "Easy", "coding", "vars", "Solve it", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
     ]
     conn = MockConnection(
         responses=[
@@ -142,9 +148,35 @@ def test_get_exercises_by_course_instructor_success(monkeypatch, instructor_user
 #returns available modes 
 def test_get_exercise_types_success(monkeypatch, instructor_user):
     rows = [
-        ("type-1", "Mode A", "desc", 3, 1, 1, "style", "misc", True, "course-1")
+        (
+            "type-1",
+            "Mode A",
+            "desc",
+            3,
+            1,
+            1,
+            "style",
+            "misc",
+            True,
+            "course-1",
+            False,
+            None,
+            0,
+            True,
+            False,
+            "after_submission",
+        )
     ]
-    conn = MockConnection(responses=[MockResult(fetchall_value=rows)])
+    empty = MockResult(fetchall_value=[])
+    conn = MockConnection(
+        responses=[
+            MockResult(fetchall_value=rows),
+            empty,
+            empty,
+            empty,
+            empty,
+        ]
+    )
     monkeypatch.setattr(router_exercises, "engine", MockEngine(conn))
 
     result = router_exercises.get_exercise_types("course-1", instructor_user)
@@ -164,12 +196,14 @@ def test_create_custom_mode_success(monkeypatch, instructor_user):
         guidanceStyle="guide",
         anticipatedMisconceptions="logic",
         category="course-1",
+        enableAdaptiveHints=True,
+        hintLimit=3,
+        cooldownSeconds=25,
+        showSolutionPolicy="after_submission",
     )
     conn = MockConnection(
         responses=[
-            MockResult(),  # alter 1
-            MockResult(),  # alter 2
-            MockResult(),  # alter 3
+            MockResult(fetchone_value=(1,)),  # course owner
             MockResult(fetchone_value=("type-99",)),  # insert
         ]
     )
@@ -183,7 +217,12 @@ def test_create_custom_mode_success(monkeypatch, instructor_user):
 
 #no duplicates of customized mode names allowed
 def test_create_custom_mode_duplicate_name(monkeypatch, instructor_user):
-    request = router_exercises.CustomModeCreate(name="Mode A")
+    request = router_exercises.CustomModeCreate(
+        name="Mode A",
+        category="course-1",
+        enableAdaptiveHints=True,
+        hintLimit=2,
+    )
 
     orig = FakeOrigExc("duplicate key")
     exc = IntegrityError("INSERT failed", params=None, orig=orig)
@@ -191,10 +230,8 @@ def test_create_custom_mode_duplicate_name(monkeypatch, instructor_user):
 
     conn = MockConnection(
         responses=[
-            MockResult(),  # alter 1
-            MockResult(),  # alter 2
-            MockResult(),  # alter 3
-            exc,           # insert fails
+            MockResult(fetchone_value=(1,)),  # course owner
+            exc,  # insert fails
         ]
     )
     monkeypatch.setattr(router_exercises, "engine", MockEngine(conn))
@@ -270,7 +307,6 @@ def test_create_exercise_success_with_testcases(monkeypatch, instructor_user):
         title="Ex 1",
         difficultyLevel="Easy",
         exerciseType="coding",
-        keyConcept="loops",
         prerequisites="variables",
         problem="Do it",
         referenceSolution="print('ok')",
@@ -330,12 +366,15 @@ def test_delete_exercise_admin_success(monkeypatch, admin_user):
 
 #enrolled student can access exercise details
 def test_get_exercise_student_success(monkeypatch, student_user):
-    exercise = ("ex-1", "course-1", "Loops", "Easy", "coding", "loop", "vars", "Solve", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
+    exercise = ("ex-1", "course-1", "Loops", "Easy", "coding", "vars", "Solve", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
     conn = MockConnection(
         responses=[
             MockResult(),                     # purge
             MockResult(fetchone_value=exercise),
             MockResult(fetchone_value=(1,)),  # enrollment
+            MockResult(),                     # test cases fetchall
+            MockResult(fetchone_value=(False, None, 0)),  # exercisestype row
+            MockResult(fetchone_value=None),  # ai state
         ]
     )
     monkeypatch.setattr(router_exercises, "engine", MockEngine(conn))
@@ -344,15 +383,17 @@ def test_get_exercise_student_success(monkeypatch, student_user):
 
     assert result["exerciseId"] == "ex-1"
     assert result["courseId"] == "course-1"
+    assert "aiAssistant" in result
 
 #course owner instructor can access exercise details
 def test_get_exercise_instructor_success(monkeypatch, instructor_user):
-    exercise = ("ex-1", "course-1", "Loops", "Easy", "coding", "loop", "vars", "Solve", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
+    exercise = ("ex-1", "course-1", "Loops", "Easy", "coding", "vars", "Solve", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
     conn = MockConnection(
         responses=[
             MockResult(),                          # purge
             MockResult(fetchone_value=exercise),
-            MockResult(fetchone_value=("inst-1",)) # course owner
+            MockResult(fetchone_value=("inst-1",)),  # course owner
+            MockResult(),                          # test cases
         ]
     )
     monkeypatch.setattr(router_exercises, "engine", MockEngine(conn))
@@ -364,7 +405,7 @@ def test_get_exercise_instructor_success(monkeypatch, instructor_user):
 
 #non-owner instructor should not access exercise details
 def test_get_exercise_instructor_forbidden(monkeypatch, instructor_user):
-    exercise = ("ex-1", "course-1", "Loops", "Easy", "coding", "loop", "vars", "Solve", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
+    exercise = ("ex-1", "course-1", "Loops", "Easy", "coding", "vars", "Solve", "ref", True, "2026-04-01", "2026-05-01", None, "type-1", "inst-1")
     conn = MockConnection(
         responses=[
             MockResult(),                              # purge

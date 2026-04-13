@@ -190,8 +190,13 @@ const handleView = (material) => {
                         {exercise.exerciseType}
                       </span>
                     </div>
-                    <p className="text-gray-600 text-sm mb-1">
-                      {exercise.keyConcept || "No description"}
+                    <p className="text-gray-600 text-sm mb-1 line-clamp-2">
+                      {(() => {
+                        const p = (exercise.problem || "").trim().replace(/\s+/g, " ")
+                        return p
+                          ? `${p.slice(0, 140)}${p.length > 140 ? "…" : ""}`
+                          : "Open to view the problem statement."
+                      })()}
                     </p>
                     <p className="text-gray-400 text-sm mb-4">
                       Due: {exercise.dueDate

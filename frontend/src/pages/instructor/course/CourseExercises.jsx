@@ -9,11 +9,12 @@ function CourseExercises() {
   const navigate = useNavigate()
 
   const [exercises, setExercises] = useState([])
+  const [systemModes, setSystemModes] = useState([])
   const [customModes, setCustomModes] = useState([])
-  const [exerciseTypes, setExerciseTypes] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     fetchExercises()
@@ -51,28 +52,18 @@ function CourseExercises() {
       })
       if (!response.ok) return
       const data = await response.json()
+      const system = (data.types || []).filter(t => t.isSystemPresent)
       const custom = (data.types || []).filter(t => !t.isSystemPresent)
+      setSystemModes(system)
       setCustomModes(custom)
-      
-      // Update all modes to include custom ones
-      const customModeObjects = custom.map(mode => ({
-        typeId: mode.typeId,
-        name: mode.name.toUpperCase(),
-        isSystem: false
-      }))
-      setAllModes(prev => [...prev, ...customModeObjects])
     } catch {}
   }
 
   
     
 
-  const handleDeleteExercise = async (event, exercise) => {
-    event.stopPropagation()
-
-    const confirmed = window.confirm(`Delete "${exercise.title}"? This cannot be undone.`)
-    if (!confirmed) return
-
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     try {
       setDeletingId(deleteTarget.exerciseId)
       const token = localStorage.getItem("token")
@@ -93,10 +84,21 @@ function CourseExercises() {
     }
   }
 
-  const beginnerExercises = exercises.filter(e => (e.exerciseType || "").toLowerCase() === "beginner")
-  const intermediateExercises = exercises.filter(e => (e.exerciseType || "").toLowerCase() === "intermediate")
-  const seniorExercises = exercises.filter(e => (e.exerciseType || "").toLowerCase() === "senior")
-  const professionalExercises = exercises.filter(e => (e.exerciseType || "").toLowerCase() === "professional")
+  const getModeExercises = (modeName) => {
+    const mode = [...systemModes, ...customModes].find(
+      (m) => (m.name || "").toLowerCase() === modeName.toLowerCase()
+    )
+    if (mode) {
+      return exercises.filter((e) => (e.typeId || "") === mode.typeId)
+    }
+    // Fallback for legacy rows where mode was stored in exerciseType.
+    return exercises.filter((e) => (e.exerciseType || "").toLowerCase() === modeName.toLowerCase())
+  }
+
+  const beginnerExercises = getModeExercises("beginner")
+  const intermediateExercises = getModeExercises("intermediate")
+  const seniorExercises = getModeExercises("senior")
+  const professionalExercises = getModeExercises("professional")
 
   const ExerciseCard = ({ exercise }) => (
     <div
@@ -117,8 +119,11 @@ function CourseExercises() {
           }
         </button>
       </div>
-      <p className="text-sm text-gray-500 mt-1">
-        {exercise.keyConcept || "No description"}
+      <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+        {(() => {
+          const p = (exercise.problem || "").trim().replace(/\s+/g, " ")
+          return p ? `${p.slice(0, 120)}${p.length > 120 ? "…" : ""}` : "No description"
+        })()}
       </p>
       <div className="flex justify-between text-xs text-gray-400 mt-2">
         <span>Difficulty: {exercise.difficultyLevel}</span>
@@ -256,9 +261,7 @@ function CourseExercises() {
 
           {/* CUSTOM MODES — one column per custom mode, always visible */}
           {customModes.map((mode) => {
-            const modeExercises = exercises.filter(e =>
-              (e.exerciseType || "").toLowerCase() === mode.name.toLowerCase()
-            )
+            const modeExercises = getModeExercises(mode.name || "")
             return (
               <div key={mode.typeId} className="bg-white p-6 rounded-xl shadow">
                 <h2 className="font-semibold mb-4 text-[#6E5C86]">{mode.name}</h2>

@@ -4,6 +4,11 @@ from fastapi import HTTPException
 import app.api.v1.router_courses as router_courses
 
 
+@pytest.fixture(autouse=True)
+def _patch_ai_schema_courses(monkeypatch):
+    monkeypatch.setattr(router_courses, "ensure_ai_configuration_schema", lambda conn: None)
+
+
 # Mock DB helpers,  fake fetchall results.
 class MockResult:
     def __init__(self, fetchone_value=None, fetchall_value=None):
@@ -144,6 +149,7 @@ def test_get_course_student_success(monkeypatch, student_user):
             MockResult(),  # purge_expired_courses
             MockResult(fetchone_value=course),  # course lookup
             MockResult(fetchone_value=enrollment),  # enrollment check
+            MockResult(fetchall_value=[]),  # concepts
         ]
     )
     monkeypatch.setattr(router_courses, "engine", MockEngine(conn))
@@ -152,6 +158,7 @@ def test_get_course_student_success(monkeypatch, student_user):
 
     assert result["courseId"] == "course-1"
     assert result["courseName"] == "Python"
+    assert result["concepts"] == []
 
 #UNROLLED STUDENTS GET 403 EHEN TRYING TO ACCESS COURSE DETAILS 
 def test_get_course_student_not_enrolled(monkeypatch, student_user):
@@ -180,6 +187,7 @@ def test_get_course_instructor_success(monkeypatch, instructor_user):
         responses=[
             MockResult(),  # purge_expired_courses
             MockResult(fetchone_value=course),  # course lookup
+            MockResult(fetchall_value=[]),  # concepts
         ]
     )
     monkeypatch.setattr(router_courses, "engine", MockEngine(conn))

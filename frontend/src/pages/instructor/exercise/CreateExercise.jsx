@@ -20,13 +20,9 @@ function CreateExercise() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // AI modes — default + custom from DB
-  const [availableModes, setAvailableModes] = useState([
-    { value: "beginner", typeId: "7f39d2ca-4339-4e43-9cf1-f91f7df65bfe", label: "Beginner — Full hints allowed" },
-    { value: "intermediate", typeId: "05e54e91-3ddf-4547-96c2-225fecb7f227", label: "Intermediate — Partial hints only" },
-    { value: "senior", typeId: "b90a5a95-ff5e-4704-a361-bebed0853afe", label: "Senior — Minimal guidance" },
-    { value: "professional", typeId: "0e876aca-6ab8-4ed2-b499-5e0ddf6f6570", label: "Professional — No AI help" },
-  ])
+  // AI modes loaded from backend (system + custom for this course)
+  const [availableModes, setAvailableModes] = useState([])
+  const modeToTypeIdMap = Object.fromEntries(availableModes.map((mode) => [mode.value, mode.typeId]))
 
 
   useEffect(() => {
@@ -38,16 +34,18 @@ function CreateExercise() {
         })
         if (!response.ok) return
         const data = await response.json()
-        const custom = (data.types || [])
-          .filter(t => !t.isSystemPresent)
-          .map(t => ({ value: t.name.toLowerCase(), typeId: t.typeId, label: `${t.name} — Custom` }))
-        if (custom.length > 0) {
-          setAvailableModes(prev => [...prev, ...custom])
-          const newMap = { ...modeToTypeIdMap }
-          custom.forEach(m => { newMap[m.value] = m.typeId })
-          setModeToTypeIdMap(newMap)
+        const modes = (data.types || []).map((t) => ({
+          value: t.name.toLowerCase(),
+          typeId: t.typeId,
+          label: t.isSystemPresent ? `${t.name} — System` : `${t.name} — Custom`,
+        }))
+        setAvailableModes(modes)
+        if (modes.length > 0) {
+          setAiMode((prev) => (modes.some((mode) => mode.value === prev) ? prev : modes[0].value))
         }
-      } catch {}
+      } catch {
+        setError("Failed to load exercise modes. Please refresh and try again.")
+      }
     }
     fetchModes()
   }, [id])
@@ -165,7 +163,6 @@ Reply ONLY in this exact JSON format with no extra text:
           title: title.trim(),
           difficultyLevel: "Easy",
           exerciseType: "coding",
-          keyConcept: null,
           problem: problemStatement.trim(),
           referenceSolution: solution.trim(),
           dueDate: dueDate,
