@@ -355,7 +355,6 @@ def delete_exercise(
 
 
 # ── MUST BE LAST — catches any /{exercise_id} ─────────────────────────────
-
 @router.get("/{exercise_id}")
 def get_exercise(
     exercise_id: str,
@@ -400,6 +399,16 @@ def get_exercise(
             if not course or str(course[0]) != str(current_user["userid"]):
                 raise HTTPException(status_code=403, detail="Not allowed to access this exercise")
 
+        # ── Fetch test cases ──────────────────────────────
+        test_cases = conn.execute(
+            text("""
+                SELECT testcaseid, input, expectedoutput
+                FROM testcases
+                WHERE exerciseid = :exercise_id
+            """),
+            {"exercise_id": exercise_id}
+        ).fetchall()
+
     return {
         "exerciseId": str(exercise[0]),
         "courseId": str(exercise[1]),
@@ -416,4 +425,12 @@ def get_exercise(
         "updatedAt": exercise[12],
         "typeId": str(exercise[13]),
         "userId": str(exercise[14]),
+        "testCases": [
+            {
+                "testCaseId": str(tc[0]),
+                "input": tc[1],
+                "expectedOutput": tc[2]
+            }
+            for tc in test_cases
+        ],
     }

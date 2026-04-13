@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
+from app.api.sandbox import router as sandbox_router  
+
 
 from app.api.v1 import (
     auth_router,
@@ -14,7 +16,15 @@ from app.api.routes_chat import router as routes_chat
 from app.api.attempts import router as attempts_router
 
 app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
     if request.method == "OPTIONS":
@@ -39,3 +49,4 @@ app.include_router(attempts_router)
 app.include_router(admin_router)
 app.include_router(material_router)
 app.include_router(routes_chat)
+app.include_router(sandbox_router)
