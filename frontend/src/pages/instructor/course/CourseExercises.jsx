@@ -64,18 +64,8 @@ function CourseExercises() {
     } catch {}
   }
 
-  const beginnerExercises = exercises.filter(e =>
-    (e.exerciseType || "").toLowerCase() === "beginner"
-  )
-  const intermediateExercises = exercises.filter(e =>
-    (e.exerciseType || "").toLowerCase() === "intermediate"
-  )
-  const seniorExercises = exercises.filter(e =>
-    (e.exerciseType || "").toLowerCase() === "senior"
-  )
-  const professionalExercises = exercises.filter(e =>
-    (e.exerciseType || "").toLowerCase() === "professional"
-  )
+  
+    
 
   const handleDeleteExercise = async (event, exercise) => {
     event.stopPropagation()
