@@ -1,7 +1,6 @@
 import pytest
 from fastapi import HTTPException
 
-# change this import if your file path is different
 import app.api.v1.router_admin as router_admin
 
 

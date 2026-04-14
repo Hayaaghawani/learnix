@@ -1,7 +1,6 @@
 import pytest
 from fastapi import HTTPException
 
-# Change this import if your path/file name is different
 import app.api.attempts as router_attempts
 
 
