@@ -37,6 +37,40 @@ function CreateCourse() {
   })
 
   const [error, setError] = useState("")
+  const [allConcepts, setAllConcepts] = useState([])
+  const [selectedConceptIds, setSelectedConceptIds] = useState(() => new Set())
+  const [conceptsLoading, setConceptsLoading] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      setConceptsLoading(false)
+      return
+    }
+    ;(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/exercises/ai-catalog`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) throw new Error("catalog")
+        const data = await res.json()
+        setAllConcepts(data.concepts || [])
+      } catch {
+        setAllConcepts([])
+      } finally {
+        setConceptsLoading(false)
+      }
+    })()
+  }, [])
+
+  const toggleConcept = (id) => {
+    setSelectedConceptIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const handleChange = (e) => {
     setCourse({ ...course, [e.target.name]: e.target.value })
@@ -93,7 +127,8 @@ function CreateCourse() {
           description: course.description,
           languageUsed: course.languageUsed,
           startDate: course.startDate,
-          endDate: course.endDate
+          endDate: course.endDate,
+          conceptIds: Array.from(selectedConceptIds),
         })
       })
 
@@ -134,6 +169,30 @@ function CreateCourse() {
             className="border p-2 rounded w-full mt-4" onChange={handleChange} />
           <textarea name="description" placeholder="Course Description (optional)"
             className="border p-2 rounded w-full mt-4 h-24" onChange={handleChange} />
+        </div>
+
+        <div className="mb-8">
+          <h2 className="font-semibold mb-2 text-lg">Course concepts (CS1 focus)</h2>
+          <p className="text-sm text-gray-500 mb-3">
+            Select the topics this course covers. These drive which concepts can be targeted in AI exercise modes.
+          </p>
+          {conceptsLoading ? (
+            <p className="text-sm text-gray-400">Loading concepts…</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+              {allConcepts.map((c) => (
+                <label key={c.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedConceptIds.has(c.id)}
+                    onChange={() => toggleConcept(c.id)}
+                    className="rounded accent-[#6E5C86]"
+                  />
+                  <span className="font-mono text-xs">{c.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Grading Structure */}

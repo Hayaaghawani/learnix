@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from app.core.database import engine
 from app.api.v1.router_auth import get_current_user, require_role
+from app.database.ai_schema import ensure_ai_configuration_schema
 
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
@@ -24,6 +25,7 @@ class CourseCreate(BaseModel):
     languageUsed: str
     startDate: str   # format: YYYY-MM-DD
     endDate: str     # format: YYYY-MM-DD
+    conceptIds: list[int] = Field(default_factory=list)
 
 
 class JoinCourseRequest(BaseModel):
@@ -131,6 +133,20 @@ def get_course(course_id: str, current_user: dict = Depends(get_current_user)):
             if str(course[6]) != str(current_user["userid"]):
                 raise HTTPException(status_code=403, detail="Not allowed to access this course")
 
+        ensure_ai_configuration_schema(conn)
+        conn.commit()
+        crow = conn.execute(
+            text("""
+                SELECT c.id, c.name
+                FROM concept c
+                JOIN course_concept cc ON cc.concept_id = c.id
+                WHERE cc.course_id = :course_id
+                ORDER BY c.name
+            """),
+            {"course_id": course_id},
+        ).fetchall()
+        concepts = [{"id": r[0], "name": r[1]} for r in crow]
+
     return {
         "courseId": str(course[0]),
         "courseName": course[1],
@@ -138,7 +154,8 @@ def get_course(course_id: str, current_user: dict = Depends(get_current_user)):
         "languageUsed": course[3],
         "startDate": course[4],
         "endDate": course[5],
-        "instructorId": str(course[6])
+        "instructorId": str(course[6]),
+        "concepts": concepts,
     }
 
 
@@ -149,6 +166,20 @@ def create_course(
     current_user: dict = Depends(require_role(["instructor", "admin"]))
 ):
     with engine.connect() as conn:
+        ensure_ai_configuration_schema(conn)
+        conn.commit()
+
+        if request.conceptIds:
+            uq = list(set(request.conceptIds))
+            ik = ", ".join(f":i{j}" for j in range(len(uq)))
+            ip = {f"i{j}": uq[j] for j in range(len(uq))}
+            cnt = conn.execute(
+                text(f"SELECT COUNT(*) FROM concept WHERE id IN ({ik})"),
+                ip,
+            ).fetchone()[0]
+            if int(cnt) != len(uq):
+                raise HTTPException(status_code=400, detail="One or more conceptIds are invalid")
+
         new_course = conn.execute(
             text("""
                 INSERT INTO courses (
@@ -165,15 +196,25 @@ def create_course(
                 "languageused": request.languageUsed,
                 "startdate": request.startDate,
                 "enddate": request.endDate,
-                "instructorid": current_user["userid"]
-            }
+                "instructorid": current_user["userid"],
+            },
         ).fetchone()
+
+        cid = str(new_course[0])
+        for concept_id in set(request.conceptIds):
+            conn.execute(
+                text("""
+                    INSERT INTO course_concept (course_id, concept_id)
+                    VALUES (:cid, :concept_id)
+                """),
+                {"cid": cid, "concept_id": concept_id},
+            )
 
         conn.commit()
 
     return {
         "message": "Course created successfully",
-        "courseId": str(new_course[0])
+        "courseId": cid,
     }
 
 
