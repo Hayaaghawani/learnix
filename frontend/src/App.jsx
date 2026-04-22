@@ -26,6 +26,7 @@ import CourseMaterial from "./pages/instructor/course/CourseMaterial"
 import CourseAnalytics from "./pages/instructor/course/CourseAnalytics"
 import AIModes from "./pages/instructor/course/AIModes"
 import ExerciseWorkspace from "./pages/instructor/exercise/ExerciseWorkspace"
+import InstructorExerciseDetails from "./pages/instructor/exercise/InstructorExerciseDetails"
 
 import About from "./pages/AboutPage"
 import Contact from "./pages/ContactPage"
@@ -61,6 +62,7 @@ function App() {
         </Route>
 
         <Route path="/exercise/:id/workspace" element={<ExerciseWorkspace />} />
+        <Route path="/instructor/course/:courseId/exercise/:exerciseId" element={<InstructorExerciseDetails />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />

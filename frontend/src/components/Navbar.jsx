@@ -1,6 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
-import { Home } from "lucide-react"
+import { Home, ArrowLeft } from "lucide-react"
 import { useState } from "react"
+
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
@@ -56,15 +57,25 @@ function Navbar() {
 
           {/* Logo + Home icon */}
           <div className="flex items-center gap-3">
-            {isLoggedIn && (userRole === "student" || userRole === "instructor" || userRole === "admin") && (
-              <button
-                onClick={handleHomeDashboard}
-                className="text-white/70 hover:text-white transition"
-                title="Go to Dashboard"
-              >
-                <Home size={22} />
-              </button>
-            )}
+           {isLoggedIn && (userRole === "student" || userRole === "instructor" || userRole === "admin") && (
+  <div className="flex gap-6 items-center ">
+    <button
+      onClick={() => navigate(-1)}
+      className="text-white/70 hover:text-white transition"
+      title="Go back"
+    >
+      <ArrowLeft size={22} />
+    </button>
+    <button 
+      onClick={handleHomeDashboard}
+      className="text-white/70 hover:text-white transition"
+      title="Go to Dashboard"
+    >
+      <Home  size={22} />
+    </button>
+  </div>
+)}
+            
             <div
               onClick={() => navigate("/")}
               className="flex items-center gap-0.5 cursor-pointer group"

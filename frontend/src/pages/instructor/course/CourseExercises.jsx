@@ -103,7 +103,7 @@ function CourseExercises() {
   const ExerciseCard = ({ exercise }) => (
     <div
       className="bg-gray-50 p-4 rounded-lg mb-3 shadow-sm cursor-pointer hover:bg-gray-100 transition"
-      onClick={() => navigate(`/exercise/${exercise.exerciseId}/workspace`)}
+      onClick={() => navigate(`/instructor/course/${id}/exercise/${exercise.exerciseId}`)}
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-medium">{exercise.title}</h3>
