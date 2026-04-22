@@ -14,6 +14,7 @@ function CourseExercises() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     fetchExercises()
