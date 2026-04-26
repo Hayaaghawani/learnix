@@ -10,15 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "^6.1.4",
+    "@codemirror/lang-python": "^6.0.1",
+    "@monaco-editor/react": "^4.7.0",
+    "@uiw/react-codemirror": "^4.21.20",
     "framer-motion": "^12.34.4",
     "lucide-react": "^0.576.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.30.3",
-    "recharts": "^3.8.0",
-    "@uiw/react-codemirror": "^4.21.20",
-    "@codemirror/lang-python": "^6.0.1",
-    "@codemirror/lang-javascript": "^6.1.4"
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

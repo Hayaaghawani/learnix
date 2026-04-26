@@ -5,6 +5,8 @@ from sqlalchemy import text
 import httpx
 import os
 import uuid
+import subprocess
+import tempfile
 
 from app.core.database import engine
 from app.api.v1.router_auth import get_current_user
@@ -34,6 +36,10 @@ class SubmitRequest(BaseModel):
     code: str
     language: str
     exercise_id: str
+
+class LintRequest(BaseModel):
+    code: str
+    language: str
 
 # ─── JUDGE0 HELPER ────────────────────────────────────────
 async def submit_to_judge0(code: str, language: str, stdin: str = "") -> dict:
@@ -275,3 +281,35 @@ def get_attempts(
             for r in rows
         ]
     }
+
+
+# ─── LINT (syntax check only, no execution) ───────────────
+@router.post("/lint")
+def lint_code(request: LintRequest, current_user: dict = Depends(get_current_user)):
+    suffix = ".cpp" if request.language == "cpp" else ".py"
+    with tempfile.NamedTemporaryFile(suffix=suffix, mode="w", delete=False, encoding="utf-8") as f:
+        f.write(request.code)
+        fname = f.name
+    try:
+        if request.language == "cpp":
+            result = subprocess.run(
+                ["g++", "-fsyntax-only", "-Wall", "-Wextra", fname],
+                capture_output=True, text=True, timeout=10
+            )
+        else:
+            result = subprocess.run(
+                ["python", "-m", "py_compile", fname],
+                capture_output=True, text=True, timeout=10
+            )
+        errors = (result.stderr or "").replace(fname, "code")
+        return {"errors": errors, "has_errors": result.returncode != 0}
+    except subprocess.TimeoutExpired:
+        return {"errors": "", "has_errors": False}
+    except FileNotFoundError:
+        # g++ not installed — return empty so frontend doesn't break
+        return {"errors": "", "has_errors": False}
+    finally:
+        try:
+            os.unlink(fname)
+        except Exception:
+            pass
