@@ -77,7 +77,7 @@ function Navbar() {
 )}
             
             <div
-              onClick={() => navigate("/")}
+             
               className="flex items-center gap-0.5 cursor-pointer group"
             >
               <span style={{ fontFamily: "'Great Vibes', cursive", color: "#f0ecda" }} className="text-5xl leading-none">L</span>

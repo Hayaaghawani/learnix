@@ -9,3 +9,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </BrowserRouter>
 )
+import { ToastProvider } from "./components/ToastContext"
+
+<ToastProvider>
+  <App />
+</ToastProvider>

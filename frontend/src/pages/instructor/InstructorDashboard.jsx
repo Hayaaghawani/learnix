@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
-import { Bell, BookOpen, AlertTriangle, Trash2, Loader2 } from "lucide-react"
-
+import { Bell, BookOpen, AlertTriangle, Trash2, Loader2, LifeBuoy } from "lucide-react"
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 function InstructorDashboard() {
@@ -122,7 +121,13 @@ function InstructorDashboard() {
           >
             <Bell size={20}/>
           </div>
-
+<div 
+    onClick={() => navigate("/instructor/help-requests")}
+    className="bg-white/20 p-3 rounded-lg cursor-pointer hover:bg-white/30 transition"
+    title="Student Help Requests"
+  >
+    <LifeBuoy size={20}/>
+  </div>
           <div 
           onClick={() => navigate("/profile")} 
           className="bg-white text-[#6E5C86] w-10 h-10 flex items-center justify-center rounded-full font-semibold cursor-pointer hover:scale-105 transition">

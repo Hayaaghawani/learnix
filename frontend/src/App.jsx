@@ -28,6 +28,8 @@ import AIModes from "./pages/instructor/course/AIModes"
 import ExerciseWorkspace from "./pages/instructor/exercise/ExerciseWorkspace"
 import InstructorExerciseDetails from "./pages/instructor/exercise/InstructorExerciseDetails"
 
+import InstructorHelpRequests from "./pages/instructor/InstructorHelpRequests"
+
 import About from "./pages/AboutPage"
 import Contact from "./pages/ContactPage"
 import Privacy from "./pages/PrivacyPage"
@@ -51,6 +53,7 @@ function App() {
         <Route path="/instructor/create-course" element={<CreateCourse />} />
         <Route path="/instructor/notifications" element={<Notifications />} />
         <Route path="/instructor/exercise/create/:id" element={<CreateExercise />} />
+        <Route path="/instructor/help-requests" element={<InstructorHelpRequests />} />
 
         <Route path="/instructor/course/:id/*" element={<CourseLayout />}>
           <Route index element={<Navigate to="exercises" />} />

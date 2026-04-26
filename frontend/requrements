@@ -36,3 +36,20 @@ ALTER TABLE exercise ALTER COLUMN keyconcept TYPE text;
 ALTER TABLE exercise DROP CONSTRAINT exercise_check;
 
 ALTER TABLE exercise ADD CONSTRAINT exercise_check CHECK (duedate >= CURRENT_DATE);
+
+//last changes
+
+CREATE TABLE helprequest (
+    requestid     UUID PRIMARY KEY,
+    exerciseid    UUID NOT NULL REFERENCES exercise(exerciseid),
+    studentid     UUID NOT NULL REFERENCES users(userid),
+    instructorid  UUID NOT NULL REFERENCES users(userid),
+    message       TEXT NOT NULL,
+    codesnapshot  TEXT,
+    language      VARCHAR(20) DEFAULT 'python',
+    status        VARCHAR(20) DEFAULT 'pending',
+    createdat     TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE helprequest ADD COLUMN reply TEXT;
+ALTER TABLE helprequest ADD COLUMN repliedat TIMESTAMP;
