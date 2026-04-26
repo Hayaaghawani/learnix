@@ -1,28 +1,24 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import {
-  ArrowLeft, Calendar, Clock, Code2, Eye, EyeOff,
-  Users, CheckCircle2, XCircle, BarChart2, Loader2,
-  BookOpen, Cpu, Trophy, AlertCircle, ChevronDown, ChevronUp
-} from "lucide-react"
+import { ArrowLeft, Calendar, Clock, Code2, Eye, EyeOff, Users, CheckCircle2, XCircle, BarChart2, Loader2, BookOpen, Cpu, Trophy, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
+import { motion } from "framer-motion"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
-function StatCard({ icon: Icon, label, value, color = "purple" }) {
+function StatCard({ icon: Icon, label, value, color }) {
   const colors = {
-    purple: "bg-purple-50 text-purple-700 border-purple-100",
-    green:  "bg-green-50  text-green-700  border-green-100",
-    blue:   "bg-blue-50   text-blue-700   border-blue-100",
-    amber:  "bg-amber-50  text-amber-700  border-amber-100",
+    purple: { bg: "rgba(142,125,165,0.12)", border: "rgba(142,125,165,0.2)", text: "#b298da" },
+    green:  { bg: "rgba(34,197,94,0.08)",  border: "rgba(34,197,94,0.15)",  text: "#4ade80" },
+    blue:   { bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.15)", text: "#60a5fa" },
+    amber:  { bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.15)", text: "#fbbf24" },
   }
+  const c = colors[color] || colors.purple
   return (
-    <div className={`rounded-xl border p-4 flex items-center gap-3 ${colors[color]}`}>
-      <div className="shrink-0">
-        <Icon size={22} />
-      </div>
+    <div style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+      <Icon size={20} color={c.text} />
       <div>
-        <p className="text-xs font-medium opacity-70 uppercase tracking-wide">{label}</p>
-        <p className="text-xl font-bold">{value}</p>
+        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</p>
+        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 20, fontWeight: 700, color: c.text }}>{value}</p>
       </div>
     </div>
   )
@@ -31,206 +27,129 @@ function StatCard({ icon: Icon, label, value, color = "purple" }) {
 function InstructorExerciseDetails() {
   const { exerciseId, courseId } = useParams()
   const navigate = useNavigate()
-
-  const [exercise, setExercise]     = useState(null)
+  const [exercise, setExercise]       = useState(null)
   const [submissions, setSubmissions] = useState([])
-  const [aiType, setAiType]         = useState(null)
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState("")
+  const [aiType, setAiType]           = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState("")
   const [showSolution, setShowSolution] = useState(false)
-  const [expandedTc, setExpandedTc] = useState(null)
+  const [expandedTc, setExpandedTc]   = useState(null)
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true)
-      setError("")
+      setLoading(true); setError("")
       try {
-        const token = localStorage.getItem("token")
-        const headers = { Authorization: `Bearer ${token}` }
-
-        // fetch exercise
+        const token = localStorage.getItem("token"); const headers = { Authorization: `Bearer ${token}` }
         const exRes = await fetch(`${API_BASE_URL}/exercises/${exerciseId}`, { headers })
         if (!exRes.ok) throw new Error("Could not load exercise")
-        const exData = await exRes.json()
-        setExercise(exData)
-
-        // fetch AI type info using typeId
+        const exData = await exRes.json(); setExercise(exData)
         if (exData.typeId) {
-          const typesRes = await fetch(
-            `${API_BASE_URL}/exercises/types/course/${exData.courseId}`,
-            { headers }
-          )
-          if (typesRes.ok) {
-            const typesData = await typesRes.json()
-            const found = (typesData.types || []).find(t => t.typeId === exData.typeId)
-            setAiType(found || null)
-          }
+          const typesRes = await fetch(`${API_BASE_URL}/exercises/types/course/${exData.courseId}`, { headers })
+          if (typesRes.ok) { const td = await typesRes.json(); setAiType((td.types || []).find(t => t.typeId === exData.typeId) || null) }
         }
-
-        // fetch submissions/attempts for this exercise
         try {
-          const subRes = await fetch(
-            `${API_BASE_URL}/sandbox/attempts/${exerciseId}`,
-            { headers }
-          )
-          if (subRes.ok) {
-            const subData = await subRes.json()
-            setSubmissions(subData.attempts || [])
-          }
-        } catch {
-          // submissions optional
-        }
-      } catch (e) {
-        setError(e.message || "Failed to load exercise details")
-      } finally {
-        setLoading(false)
-      }
+          const subRes = await fetch(`${API_BASE_URL}/sandbox/attempts/${exerciseId}`, { headers })
+          if (subRes.ok) { const sd = await subRes.json(); setSubmissions(sd.attempts || []) }
+        } catch {}
+      } catch (e) { setError(e.message || "Failed to load exercise details") }
+      finally { setLoading(false) }
     }
     load()
   }, [exerciseId])
 
   if (loading) return (
-    <div className="min-h-screen bg-[#F4F1F7] flex items-center justify-center">
-      <Loader2 className="animate-spin text-[#8E7DA5]" size={36} />
+    <div style={{ minHeight: "100vh", background: "#120b22", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <Loader2 size={32} className="animate-spin" style={{ color: "#8E7DA5" }} />
     </div>
   )
-
   if (error) return (
-    <div className="min-h-screen bg-[#F4F1F7] flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow p-8 text-center max-w-md">
-        <AlertCircle className="text-red-400 mx-auto mb-3" size={40} />
-        <p className="text-gray-700 font-medium">{error}</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="mt-4 text-sm text-[#6E5C86] hover:underline"
-        >
-          ← Go back
-        </button>
+    <div style={{ minHeight: "100vh", background: "#120b22", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans',sans-serif" }}>
+      <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "40px", textAlign: "center" }}>
+        <AlertCircle size={36} style={{ color: "#f87171", margin: "0 auto 12px" }} />
+        <p style={{ color: "rgba(255,255,255,0.6)", marginBottom: 16 }}>{error}</p>
+        <button onClick={() => navigate(-1)} style={{ color: "#b298da", background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>← Go back</button>
       </div>
     </div>
   )
-
   if (!exercise) return null
 
   const visibleTc  = (exercise.testCases || []).filter(tc => tc.isVisible)
   const hiddenTc   = (exercise.testCases || []).filter(tc => !tc.isVisible)
   const totalSubs  = submissions.length
   const passedSubs = submissions.filter(s => s.status === "Passed").length
-  const avgScore   = totalSubs
-    ? Math.round(submissions.reduce((a, s) => a + (s.score || 0), 0) / totalSubs)
-    : 0
+  const avgScore   = totalSubs ? Math.round(submissions.reduce((a, s) => a + (s.score || 0), 0) / totalSubs) : 0
   const passRate   = totalSubs ? Math.round((passedSubs / totalSubs) * 100) : 0
+  const dueDate    = exercise.dueDate ? new Date(exercise.dueDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "No due date"
+  const createdAt  = exercise.createdAt ? new Date(exercise.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"
 
-  const dueDate = exercise.dueDate
-    ? new Date(exercise.dueDate).toLocaleDateString("en-US", {
-        year: "numeric", month: "long", day: "numeric"
-      })
-    : "No due date"
-
-  const createdAt = exercise.createdAt
-    ? new Date(exercise.createdAt).toLocaleDateString("en-US", {
-        year: "numeric", month: "short", day: "numeric"
-      })
-    : "—"
+  const cardStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "22px 24px", marginBottom: 16 }
+  const secLabel  = { fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em" }
+  const metaRow   = { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }
 
   return (
-    <div className="min-h-screen bg-[#F4F1F7]">
+    <div style={{ minHeight: "100vh", background: "#120b22", fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');`}</style>
 
-      {/* Header bar */}
-      <div className="bg-white border-b border-gray-100 px-8 py-5 flex items-center gap-4">
-        <button
-          onClick={() => navigate(`/instructor/course/${courseId}/exercises`)}
-          className="flex items-center gap-1.5 text-[#6E5C86] hover:text-[#3e2764] text-sm font-medium transition-colors"
-        >
-          <ArrowLeft size={16} /> Back to Exercises
+      {/* Header */}
+      <div style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "14px 32px", display: "flex", alignItems: "center", gap: 12 }}>
+        <button onClick={() => navigate(`/instructor/course/${courseId}/exercises`)} style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(178,152,218,0.7)", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif" }}>
+          <ArrowLeft size={15} /> Back
         </button>
-        <span className="text-gray-300">|</span>
-        <h1 className="text-lg font-semibold text-[#3e2764] truncate">{exercise.title}</h1>
-        <span className="ml-auto text-xs text-gray-400">Created {createdAt}</span>
+        <span style={{ color: "rgba(255,255,255,0.1)" }}>|</span>
+        <h1 style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.85)", flex: 1 }}>{exercise.title}</h1>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Created {createdAt}</span>
       </div>
 
-      <div className="px-8 py-8 max-w-5xl mx-auto space-y-6">
+      <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 24 }}>
           <StatCard icon={Users}        label="Total Submissions" value={totalSubs}       color="purple" />
           <StatCard icon={CheckCircle2} label="Pass Rate"         value={`${passRate}%`}  color="green"  />
           <StatCard icon={Trophy}       label="Avg Score"         value={`${avgScore}%`}  color="blue"   />
           <StatCard icon={BarChart2}    label="Test Cases"        value={exercise.testCases?.length || 0} color="amber" />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
 
-          {/* LEFT col — main info */}
-          <div className="lg:col-span-2 space-y-5">
-
-            {/* Problem statement */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen size={18} className="text-[#6E5C86]" />
-                <h2 className="font-semibold text-[#3e2764]">Problem Statement</h2>
+          {/* Left */}
+          <div>
+            {/* Problem */}
+            <div style={cardStyle}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <BookOpen size={16} color="#8E7DA5" />
+                <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>Problem Statement</p>
               </div>
-              <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                {exercise.problem || <span className="italic text-gray-400">No problem statement.</span>}
-              </p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{exercise.problem || <span style={{ fontStyle: "italic", color: "rgba(255,255,255,0.2)" }}>No problem statement.</span>}</p>
             </div>
 
             {/* Test cases */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Code2 size={18} className="text-[#6E5C86]" />
-                <h2 className="font-semibold text-[#3e2764]">Test Cases</h2>
-                <span className="ml-auto text-xs text-gray-400">
-                  {visibleTc.length} visible · {hiddenTc.length} hidden
-                </span>
+            <div style={cardStyle}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <Code2 size={16} color="#8E7DA5" />
+                <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>Test Cases</p>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{visibleTc.length} visible · {hiddenTc.length} hidden</span>
               </div>
-
-              {(exercise.testCases || []).length === 0 ? (
-                <p className="text-sm text-gray-400 italic">No test cases defined.</p>
-              ) : (
-                <div className="space-y-2">
+              {(exercise.testCases || []).length === 0 ? <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontStyle: "italic" }}>No test cases defined.</p> : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {(exercise.testCases || []).map((tc, i) => (
-                    <div
-                      key={tc.testCaseId || i}
-                      className="border border-gray-100 rounded-lg overflow-hidden"
-                    >
-                      <button
-                        onClick={() => setExpandedTc(expandedTc === i ? null : i)}
-                        className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          {tc.isVisible
-                            ? <Eye size={14} className="text-green-500" />
-                            : <EyeOff size={14} className="text-gray-400" />
-                          }
-                          <span className="font-medium text-gray-700">Case {i + 1}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            tc.isVisible
-                              ? "bg-green-50 text-green-700"
-                              : "bg-gray-100 text-gray-500"
-                          }`}>
-                            {tc.isVisible ? "Visible" : "Hidden"}
-                          </span>
+                    <div key={tc.testCaseId || i} style={{ border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, overflow: "hidden" }}>
+                      <button onClick={() => setExpandedTc(expandedTc === i ? null : i)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "rgba(255,255,255,0.03)", border: "none", cursor: "pointer" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {tc.isVisible ? <Eye size={13} color="#4ade80" /> : <EyeOff size={13} color="rgba(255,255,255,0.2)" />}
+                          <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.6)" }}>Case {i + 1}</span>
+                          <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: tc.isVisible ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.05)", color: tc.isVisible ? "#4ade80" : "rgba(255,255,255,0.25)", border: `1px solid ${tc.isVisible ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)"}` }}>{tc.isVisible ? "Visible" : "Hidden"}</span>
                         </div>
-                        {expandedTc === i
-                          ? <ChevronUp size={14} className="text-gray-400" />
-                          : <ChevronDown size={14} className="text-gray-400" />
-                        }
+                        {expandedTc === i ? <ChevronUp size={13} color="rgba(255,255,255,0.2)" /> : <ChevronDown size={13} color="rgba(255,255,255,0.2)" />}
                       </button>
                       {expandedTc === i && (
-                        <div className="px-4 py-3 grid grid-cols-2 gap-3 bg-white">
-                          <div>
-                            <p className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wide">Input</p>
-                            <pre className="bg-gray-50 rounded-lg p-2 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
-                              {tc.input || <span className="italic text-gray-400">empty</span>}
-                            </pre>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wide">Expected Output</p>
-                            <pre className="bg-gray-50 rounded-lg p-2 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
-                              {tc.expectedOutput}
-                            </pre>
-                          </div>
+                        <div style={{ padding: "12px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          {[["Input", tc.input || "(empty)"], ["Expected Output", tc.expectedOutput]].map(([lbl, val]) => (
+                            <div key={lbl}>
+                              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{lbl}</p>
+                              <pre style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.6)", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{val}</pre>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -240,197 +159,102 @@ function InstructorExerciseDetails() {
             </div>
 
             {/* Reference solution */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Code2 size={18} className="text-[#6E5C86]" />
-                  <h2 className="font-semibold text-[#3e2764]">Reference Solution</h2>
+            <div style={cardStyle}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Code2 size={16} color="#8E7DA5" />
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>Reference Solution</p>
                 </div>
-                <button
-                  onClick={() => setShowSolution(v => !v)}
-                  className="text-xs flex items-center gap-1.5 text-[#6E5C86] hover:text-[#3e2764] font-medium transition-colors"
-                >
-                  {showSolution ? <EyeOff size={13} /> : <Eye size={13} />}
-                  {showSolution ? "Hide" : "Show"} Solution
+                <button onClick={() => setShowSolution(v => !v)} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#b298da", background: "none", border: "none", cursor: "pointer" }}>
+                  {showSolution ? <EyeOff size={12} /> : <Eye size={12} />}{showSolution ? "Hide" : "Show"}
                 </button>
               </div>
-              {showSolution ? (
-                <pre className="bg-gray-900 text-green-400 rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap">
-                  {exercise.referenceSolution || "No solution provided."}
-                </pre>
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-4 text-center text-sm text-gray-400 italic">
-                  Solution hidden — click "Show Solution" to reveal
-                </div>
-              )}
+              {showSolution
+                ? <pre style={{ background: "#0d1117", color: "#4ade80", borderRadius: 10, padding: "14px 16px", fontSize: 12, fontFamily: "monospace", overflowX: "auto", whiteSpace: "pre-wrap" }}>{exercise.referenceSolution || "No solution provided."}</pre>
+                : <div style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 10, padding: "20px", textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.2)", fontStyle: "italic" }}>Solution hidden — click "Show" to reveal</div>
+              }
             </div>
 
-            {/* Recent submissions */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <BarChart2 size={18} className="text-[#6E5C86]" />
-                <h2 className="font-semibold text-[#3e2764]">Student Submissions</h2>
-                <span className="ml-auto text-xs text-gray-400">{totalSubs} total</span>
+            {/* Submissions */}
+            <div style={cardStyle}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <BarChart2 size={16} color="#8E7DA5" />
+                <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>Student Submissions</p>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{totalSubs} total</span>
               </div>
-              {submissions.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">No submissions yet.</p>
-              ) : (
-                <div className="divide-y divide-gray-50">
-                  {submissions.slice(0, 10).map((s, i) => (
-                    <div key={i} className="flex items-center justify-between py-2.5 text-sm">
-                      <div className="flex items-center gap-2">
-                        {s.status === "Passed"
-                          ? <CheckCircle2 size={15} className="text-green-500" />
-                          : <XCircle      size={15} className="text-red-400"   />
-                        }
-                        <span className="text-gray-600">Attempt #{s.attemptNumber || i + 1}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          s.status === "Passed"
-                            ? "bg-green-50 text-green-700"
-                            : "bg-red-50 text-red-600"
-                        }`}>
-                          {s.status}
-                        </span>
-                        <span className="text-gray-500 text-xs w-14 text-right">
-                          {s.score ?? "—"}%
-                        </span>
-                      </div>
+              {submissions.length === 0
+                ? <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontStyle: "italic" }}>No submissions yet.</p>
+                : submissions.slice(0, 10).map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {s.status === "Passed" ? <CheckCircle2 size={14} color="#4ade80" /> : <XCircle size={14} color="#f87171" />}
+                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Attempt #{s.attemptNumber || i + 1}</span>
                     </div>
-                  ))}
-                  {submissions.length > 10 && (
-                    <p className="text-xs text-gray-400 italic pt-2">
-                      Showing 10 of {submissions.length} submissions
-                    </p>
-                  )}
-                </div>
-              )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: s.status === "Passed" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${s.status === "Passed" ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, color: s.status === "Passed" ? "#4ade80" : "#f87171", fontWeight: 500 }}>{s.status}</span>
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", width: 40, textAlign: "right" }}>{s.score ?? "—"}%</span>
+                    </div>
+                  </div>
+                ))
+              }
+              {submissions.length > 10 && <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontStyle: "italic", paddingTop: 8 }}>Showing 10 of {submissions.length}</p>}
             </div>
           </div>
 
-          {/* RIGHT col — metadata */}
-          <div className="space-y-5">
-
+          {/* Right */}
+          <div>
             {/* Exercise info */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="font-semibold text-[#3e2764] mb-4">Exercise Info</h2>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-2 text-gray-600">
-                  <Calendar size={15} className="mt-0.5 text-[#8E7DA5] shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Due Date</p>
-                    <p className="font-medium text-gray-700">{dueDate}</p>
+            <div style={cardStyle}>
+              <p style={{ ...secLabel, marginBottom: 14 }}>Exercise Info</p>
+              {[
+                [Calendar, "Due Date", dueDate],
+                [BarChart2, "Difficulty", exercise.difficultyLevel || "—"],
+                [Code2, "Type", exercise.exerciseType || "—"],
+                exercise.prerequisites ? [BookOpen, "Prerequisites", exercise.prerequisites] : null,
+              ].filter(Boolean).map(([Icon, label, value]) => (
+                <div key={label} style={{ ...metaRow }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <Icon size={13} color="#8E7DA5" />
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{label}</span>
                   </div>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.7)" }}>{value}</span>
                 </div>
-                <div className="flex items-start gap-2 text-gray-600">
-                  <BarChart2 size={15} className="mt-0.5 text-[#8E7DA5] shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Difficulty</p>
-                    <p className="font-medium text-gray-700">{exercise.difficultyLevel || "—"}</p>
-                  </div>
+              ))}
+              <div style={{ ...metaRow, borderBottom: "none" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <Clock size={13} color="#8E7DA5" />
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Status</span>
                 </div>
-                <div className="flex items-start gap-2 text-gray-600">
-                  <Code2 size={15} className="mt-0.5 text-[#8E7DA5] shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Exercise Type</p>
-                    <p className="font-medium text-gray-700">{exercise.exerciseType || "—"}</p>
-                  </div>
-                </div>
-                {exercise.prerequisites && (
-                  <div className="flex items-start gap-2 text-gray-600">
-                    <BookOpen size={15} className="mt-0.5 text-[#8E7DA5] shrink-0" />
-                    <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Prerequisites</p>
-                      <p className="font-medium text-gray-700">{exercise.prerequisites}</p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-start gap-2 text-gray-600">
-                  <Clock size={15} className="mt-0.5 text-[#8E7DA5] shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Status</p>
-                    <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-0.5 ${
-                      exercise.isActive
-                        ? "bg-green-50 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}>
-                      {exercise.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                </div>
+                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: exercise.isActive ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.05)", border: `1px solid ${exercise.isActive ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)"}`, color: exercise.isActive ? "#4ade80" : "rgba(255,255,255,0.3)" }}>
+                  {exercise.isActive ? "Active" : "Inactive"}
+                </span>
               </div>
             </div>
 
-            {/* AI Mode info */}
+            {/* AI Mode */}
             {aiType && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Cpu size={18} className="text-[#6E5C86]" />
-                  <h2 className="font-semibold text-[#3e2764]">AI Mode</h2>
+              <div style={cardStyle}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                  <Cpu size={15} color="#8E7DA5" />
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>AI Mode</p>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Mode Name</span>
-                    <span className="font-medium text-gray-700 capitalize">{aiType.name}</span>
+                {[
+                  ["Mode Name", aiType.name],
+                  ["Adaptive Hints", aiType.enableAdaptiveHints ? "Enabled" : "Disabled", aiType.enableAdaptiveHints ? "#4ade80" : null],
+                  aiType.enableAdaptiveHints && aiType.hintLimit != null ? ["Hint Limit", `${aiType.hintLimit} hints`] : null,
+                  aiType.cooldownSeconds > 0 ? ["AI Cooldown", `${aiType.cooldownSeconds}s`] : null,
+                  ["Error Explanation", aiType.enableErrorExplanation ? "Enabled" : "Disabled", aiType.enableErrorExplanation ? "#60a5fa" : null],
+                  ["RAG", aiType.enableRag ? "Enabled" : "Disabled", aiType.enableRag ? "#b298da" : null],
+                  ["Show Solution", (aiType.showSolutionPolicy || "after_submission").replace(/_/g, " ")],
+                ].filter(Boolean).map(([label, value, color], i, arr) => (
+                  <div key={label} style={{ ...metaRow, borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{label}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: color || "rgba(255,255,255,0.7)", textTransform: "capitalize" }}>{value}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Adaptive Hints</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      aiType.enableAdaptiveHints
-                        ? "bg-green-50 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}>
-                      {aiType.enableAdaptiveHints ? "Enabled" : "Disabled"}
-                    </span>
-                  </div>
-                  {aiType.enableAdaptiveHints && aiType.hintLimit != null && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Hint Limit</span>
-                      <span className="font-medium text-gray-700">{aiType.hintLimit} hints</span>
-                    </div>
-                  )}
-                  {aiType.cooldownSeconds > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">AI Cooldown</span>
-                      <span className="font-medium text-gray-700">{aiType.cooldownSeconds}s</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Error Explanation</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      aiType.enableErrorExplanation
-                        ? "bg-blue-50 text-blue-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}>
-                      {aiType.enableErrorExplanation ? "Enabled" : "Disabled"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">RAG</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      aiType.enableRag
-                        ? "bg-purple-50 text-purple-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}>
-                      {aiType.enableRag ? "Enabled" : "Disabled"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Show Solution</span>
-                    <span className="font-medium text-gray-700 capitalize text-xs">
-                      {(aiType.showSolutionPolicy || "after_submission").replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  {aiType.description && (
-                    <p className="text-xs text-gray-400 pt-1 border-t border-gray-50 italic">
-                      {aiType.description}
-                    </p>
-                  )}
-                </div>
+                ))}
+                {aiType.description && <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontStyle: "italic", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>{aiType.description}</p>}
               </div>
             )}
-
           </div>
         </div>
       </div>

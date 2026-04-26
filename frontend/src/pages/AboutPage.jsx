@@ -1,182 +1,106 @@
 import { motion } from "framer-motion"
-import { useNavigate } from "react-router-dom"
+
+const fade = (delay = 0) => ({
+  initial: { opacity: 0, y: 30 },
+  whileInView: { opacity: 1, y: 0 },
+  transition: { duration: 0.7, delay },
+  viewport: { once: true },
+})
+
+const body  = { fontSize: 15, color: "rgba(255,255,255,0.45)", lineHeight: 1.85, fontFamily: "'DM Sans', sans-serif" }
+const h2    = { fontSize: 28, fontWeight: 600, color: "rgba(255,255,255,0.88)", fontFamily: "'DM Sans', sans-serif", marginBottom: 20 }
+const alt   = { padding: "80px 40px", borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.025)" }
+const plain = { padding: "80px 40px", borderTop: "1px solid rgba(255,255,255,0.05)" }
 
 function AboutPage() {
-  const navigate = useNavigate()
-
   return (
-    <div className="min-h-screen relative bg-[#D6CEDC] overflow-hidden">
+    <div style={{ minHeight: "100vh", background: "#120b22", fontFamily: "'DM Sans', sans-serif", position: "relative", overflow: "hidden" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@1,300&display=swap');`}</style>
 
-      {/* Subtle Diamond Background */}
-      <div className="absolute inset-0 opacity-[0.06] pointer-events-none">
-        <svg width="100%" height="100%">
-          <pattern id="diamondBg" width="60" height="60" patternUnits="userSpaceOnUse">
-            <rect
-              x="20"
-              y="20"
-              width="8"
-              height="8"
-              transform="rotate(45 24 24)"
-              fill="#3e2764"
-            />
-          </pattern>
-          <rect width="100%" height="100%" fill="url(#diamondBg)" />
-        </svg>
+      {/* Ambient orbs */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -120, left: "50%", transform: "translateX(-50%)", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(110,92,134,0.14) 0%, transparent 70%)" }} />
+        <div style={{ position: "absolute", bottom: -100, right: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(62,39,100,0.15) 0%, transparent 70%)" }} />
       </div>
 
-      
-
-      {/* HERO SECTION */}
-      <section className="relative z-10 py-28 px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="max-w-4xl mx-auto space-y-6"
-        >
-          <h1 className="text-5xl font-luxury tracking-wide">
+      {/* HERO */}
+      <section style={{ position: "relative", zIndex: 1, padding: "110px 40px 80px", textAlign: "center" }}>
+        <motion.div {...fade()} style={{ maxWidth: 820, margin: "0 auto" }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontWeight: 300, fontSize: "clamp(2.2rem,5vw,3.8rem)", color: "rgba(240,236,218,0.92)", marginBottom: 18 }}>
             About Learnix
           </h1>
-
-          <div className="w-24 h-[2px] bg-gradient-to-r from-yellow-400 to-yellow-600 mx-auto rounded-full"></div>
-
-          <p className="text-lg text-gray-700 leading-relaxed max-w-3xl mx-auto">
-  Learnix is a structured AI-guided learning platform designed to support 
-  foundational programming education within academically rigorous environments. 
-  Our platform integrates intelligent assistance directly into the learning process 
-  while preserving the principles of independent problem-solving, instructor oversight, 
-  and institutional integrity.
-</p>
-<p className="text-gray-700 text-base leading-relaxed max-w-3xl mx-auto">
-  Designed with both educators and students in mind, Learnix bridges the 
-  evolving intersection between artificial intelligence and formal instruction. 
-  The platform provides scalable, ethically grounded AI support tailored 
-  specifically for early-stage computer science education.
-</p>
+          <div style={{ width: 60, height: 1, background: "linear-gradient(90deg, transparent, rgba(178,152,218,0.6), transparent)", margin: "0 auto 30px" }} />
+          <p style={{ ...body, marginBottom: 14 }}>
+            Learnix is a structured AI-guided learning platform designed to support foundational programming education within academically rigorous environments. Our platform integrates intelligent assistance directly into the learning process while preserving the principles of independent problem-solving, instructor oversight, and institutional integrity.
+          </p>
+          <p style={body}>
+            Designed with both educators and students in mind, Learnix bridges the evolving intersection between artificial intelligence and formal instruction, providing scalable, ethically grounded AI support tailored specifically for early-stage computer science education.
+          </p>
         </motion.div>
       </section>
 
-
-
-      {/* MISSION SECTION */}
-      <section className="relative z-10 py-24 px-6 bg-white/40 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9 }}
-          viewport={{ once: true }}
-          className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center"
-        >
-          <div className="space-y-6">
-            <h2 className="text-3xl font-semibold text-[#5A4A73]">
-              Our Mission
-            </h2>
-
-            <p className="text-gray-700 leading-relaxed">
-  Our mission is to redefine the role of artificial intelligence in education. 
-  Rather than positioning AI as a source of immediate answers, Learnix is built 
-  to function as a guided instructional assistant. The system encourages 
-  reflective thinking, progressive hint delivery, and instructor-configurable 
-  boundaries that align with course objectives.
-  
-  By combining AI capabilities with pedagogical structure, Learnix promotes 
-  deeper conceptual understanding while maintaining transparency, fairness, 
-  and accountability within the learning environment.
-</p>
+      {/* MISSION */}
+      <section style={{ ...alt, position: "relative", zIndex: 1 }}>
+        <motion.div {...fade(0.1)} style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+          <div>
+            <h2 style={h2}>Our Mission</h2>
+            <p style={body}>
+              Our mission is to redefine the role of artificial intelligence in education. Rather than positioning AI as a source of immediate answers, Learnix is built to function as a guided instructional assistant. The system encourages reflective thinking, progressive hint delivery, and instructor-configurable boundaries that align with course objectives. By combining AI capabilities with pedagogical structure, Learnix promotes deeper conceptual understanding while maintaining transparency, fairness, and accountability.
+            </p>
           </div>
-
-          <div className="text-[#5A4A73] text-xl italic">
-            “AI should guide the learner — not replace the learner.”
+          <div style={{ padding: "28px 32px", background: "rgba(142,125,165,0.08)", border: "1px solid rgba(178,152,218,0.15)", borderRadius: 16, fontSize: 20, fontStyle: "italic", color: "rgba(178,152,218,0.75)", fontFamily: "'Cormorant Garamond', serif", lineHeight: 1.65 }}>
+            "AI should guide the learner — not replace the learner."
           </div>
         </motion.div>
       </section>
 
-      {/* VALUES SECTION */}
-      <section className="relative z-10 py-24 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 60 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-          viewport={{ once: true }}
-          className="max-w-6xl mx-auto text-center space-y-16"
-        >
-          <h2 className="text-3xl font-semibold text-[#5A4A73]">
-            Core Principles
-          </h2>
-
-          <div className="grid md:grid-cols-4 gap-10">
-
-            {[
-              "Ethical AI Integration",
-              "Instructor Empowerment",
-              "Structured Learning Paths",
-              "Transparency & Accountability"
-            ].map((value, index) => (
-              <div
-                key={index}
-                className="bg-white/60 backdrop-blur-md p-8 rounded-xl shadow-md border border-white/40"
+      {/* CORE PRINCIPLES */}
+      <section style={{ ...plain, position: "relative", zIndex: 1 }}>
+        <motion.div {...fade(0.1)} style={{ maxWidth: 1000, margin: "0 auto", textAlign: "center" }}>
+          <h2 style={{ ...h2, textAlign: "center", marginBottom: 36 }}>Core Principles</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+            {["Ethical AI Integration", "Instructor Empowerment", "Structured Learning Paths", "Transparency & Accountability"].map((value, i) => (
+              <motion.div key={value} {...fade(i * 0.08)}
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "24px 18px", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.65)", transition: "all 0.25s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(142,125,165,0.1)"; e.currentTarget.style.borderColor = "rgba(178,152,218,0.2)" }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)" }}
               >
-                <p className="font-medium text-[#5A4A73]">
-                  {value}
-                </p>
+                {value}
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* RESEARCH & PHILOSOPHY */}
+      <section style={{ ...alt, position: "relative", zIndex: 1 }}>
+        <motion.div {...fade(0.1)} style={{ maxWidth: 760, margin: "0 auto" }}>
+          <h2 style={{ ...h2, textAlign: "center" }}>Research & Educational Philosophy</h2>
+          {[
+            "Learnix is informed by established research in computer science education, cognitive development, and instructional scaffolding. Studies consistently demonstrate that novice programmers benefit most from guided support that encourages problem decomposition, incremental reasoning, and reflective learning.",
+            "Rather than delivering direct solutions, Learnix applies structured hinting, misconception detection, and progressive assistance aligned with course materials defined by instructors. This approach mirrors effective teaching assistant interactions while maintaining consistency, scalability, and measurable engagement metrics.",
+            "Our philosophy centers on balancing technological innovation with pedagogical responsibility. Artificial intelligence, when integrated thoughtfully, should enhance cognitive development — not diminish it. Learnix is built to ensure that AI remains a tool for empowerment, not dependency.",
+          ].map((text, i) => (
+            <p key={i} style={{ ...body, marginBottom: 16 }}>{text}</p>
+          ))}
+        </motion.div>
+      </section>
+
+      {/* TEAM */}
+      <section style={{ ...plain, position: "relative", zIndex: 1, textAlign: "center" }}>
+        <motion.div {...fade(0.1)}>
+          <h2 style={{ ...h2, textAlign: "center" }}>The Team Behind Learnix</h2>
+          <div style={{ display: "flex", justifyContent: "center", gap: 48, marginTop: 12, flexWrap: "wrap" }}>
+            {["Tala Abu Mohammed", "Haya Alaghawani", "Hala Al Sallal"].map(name => (
+              <div key={name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, rgba(142,125,165,0.25), rgba(110,92,134,0.15))", border: "1px solid rgba(178,152,218,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#b298da", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic" }}>
+                  {name[0]}
+                </div>
+                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.55)" }}>{name}</span>
               </div>
             ))}
-
           </div>
         </motion.div>
-      </section>
-      {/* RESEARCH & EDUCATIONAL PHILOSOPHY */}
-<section className="relative z-10 py-24 px-6 bg-white/30">
-  <motion.div
-    initial={{ opacity: 0, y: 60 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    transition={{ duration: 1 }}
-    viewport={{ once: true }}
-    className="max-w-5xl mx-auto space-y-10"
-  >
-    <h2 className="text-3xl font-semibold text-[#5A4A73] text-center">
-      Research & Educational Philosophy
-    </h2>
-
-    <p className="text-gray-700 leading-relaxed">
-      Learnix is informed by established research in computer science education,
-      cognitive development, and instructional scaffolding. Studies consistently
-      demonstrate that novice programmers benefit most from guided support that
-      encourages problem decomposition, incremental reasoning, and reflective learning.
-    </p>
-
-    <p className="text-gray-700 leading-relaxed">
-      Rather than delivering direct solutions, Learnix applies structured hinting,
-      misconception detection, and progressive assistance aligned with course
-      materials defined by instructors. This approach mirrors effective teaching
-      assistant interactions while maintaining consistency, scalability, and
-      measurable engagement metrics.
-    </p>
-
-    <p className="text-gray-700 leading-relaxed">
-      Our philosophy centers on balancing technological innovation with pedagogical
-      responsibility. Artificial intelligence, when integrated thoughtfully,
-      should enhance cognitive development — not diminish it. Learnix is built
-      to ensure that AI remains a tool for empowerment, not dependency.
-    </p>
-  </motion.div>
-</section>
- {/* TEAM SECTION */}
-      <section className="py-20 px-6 bg-white/30">
-        <div className="max-w-5xl mx-auto text-center space-y-10">
-
-          <h2 className="text-3xl font-semibold text-[#5A4A73]">
-            The Team Behind Learnix
-          </h2>
-
-          <div className="flex flex-col md:flex-row justify-center gap-12 text-gray-700 text-lg">
-            <span>Tala Abu Mohammed</span>
-            <span>Haya Alaghawani</span>
-            <span>Hala Al Sallal</span>
-          </div>
-
-        </div>
       </section>
     </div>
   )

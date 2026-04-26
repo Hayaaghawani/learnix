@@ -1,291 +1,182 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ProfilePage.jsx
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { User, Mail, BookOpen, Calendar, Code, Lock, Eye, EyeOff } from "lucide-react"
+import { User, Mail, BookOpen, Calendar, Code, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 const ROLE_COLORS = {
-  instructor: { bg: "bg-purple-100", text: "text-purple-700" },
-  student: { bg: "bg-blue-100", text: "text-blue-700" },
-  admin: { bg: "bg-red-100", text: "text-red-700" },
+  instructor: { bg: "rgba(142,125,165,0.15)", border: "rgba(178,152,218,0.25)", text: "#b298da" },
+  student:    { bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.25)",  text: "#60a5fa" },
+  admin:      { bg: "rgba(239,68,68,0.12)",   border: "rgba(239,68,68,0.25)",   text: "#f87171" },
 }
 
-function ProfilePage() {
+export function ProfilePage() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-
-  const [showPasswordSection, setShowPasswordSection] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const [user, setUser]           = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState("")
+  const [showPwSection, setShowPwSection] = useState(false)
+  const [currentPw, setCurrentPw] = useState("")
+  const [newPw, setNewPw]         = useState("")
+  const [confirmPw, setConfirmPw] = useState("")
   const [showCurrent, setShowCurrent] = useState(false)
-  const [showNew, setShowNew] = useState(false)
-  const [passwordError, setPasswordError] = useState("")
-  const [passwordSuccess, setPasswordSuccess] = useState("")
-  const [changingPassword, setChangingPassword] = useState(false)
+  const [showNew, setShowNew]     = useState(false)
+  const [pwError, setPwError]     = useState("")
+  const [pwSuccess, setPwSuccess] = useState("")
+  const [changingPw, setChangingPw] = useState(false)
 
-  useEffect(() => {
-    fetchProfile()
-  }, [])
+  useEffect(() => { fetchProfile() }, [])
 
   const fetchProfile = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) { navigate("/"); return }
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!response.ok) { setError("Failed to load profile."); return }
-      const data = await response.json()
-      setUser(data.user)
-    } catch {
-      setError("Failed to load profile. Please try again.")
-    } finally {
-      setLoading(false)
-    }
+      const token = localStorage.getItem("token"); if (!token) { navigate("/"); return }
+      const res = await fetch(`${API_BASE_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) { setError("Failed to load profile."); return }
+      const data = await res.json(); setUser(data.user)
+    } catch { setError("Failed to load profile.") }
+    finally { setLoading(false) }
   }
 
   const handleChangePassword = async () => {
-    setPasswordError("")
-    setPasswordSuccess("")
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError("Please fill all password fields.")
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match.")
-      return
-    }
-    if (newPassword.length < 6) {
-      setPasswordError("New password must be at least 6 characters.")
-      return
-    }
-    setChangingPassword(true)
+    setPwError(""); setPwSuccess("")
+    if (!currentPw || !newPw || !confirmPw) { setPwError("Please fill all password fields."); return }
+    if (newPw !== confirmPw) { setPwError("New passwords do not match."); return }
+    if (newPw.length < 6) { setPwError("New password must be at least 6 characters."); return }
+    setChangingPw(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ currentPassword, newPassword })
-      })
-      if (!response.ok) {
-        const err = await response.json()
-        setPasswordError(err.detail || "Failed to change password.")
-        return
-      }
-      setPasswordSuccess("Password changed successfully!")
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
-      setShowPasswordSection(false)
-    } catch {
-      setPasswordError("Something went wrong. Please try again.")
-    } finally {
-      setChangingPassword(false)
-    }
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }) })
+      if (!res.ok) { const err = await res.json(); setPwError(err.detail || "Failed to change password."); return }
+      setPwSuccess("Password changed successfully!"); setCurrentPw(""); setNewPw(""); setConfirmPw(""); setShowPwSection(false)
+    } catch { setPwError("Something went wrong.") }
+    finally { setChangingPw(false) }
   }
 
-  const getInitials = () => {
-    if (!user) return "?"
-    return `${user.firstname?.charAt(0) || ""}${user.lastname?.charAt(0) || ""}`.toUpperCase()
+  const getInitials = () => user ? `${user.firstname?.charAt(0) || ""}${user.lastname?.charAt(0) || ""}`.toUpperCase() : "?"
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "Unknown"
+
+  const S = {
+    page: { minHeight: "100vh", background: "#120b22", fontFamily: "'DM Sans', sans-serif", padding: "36px 40px" },
+    card: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "22px 24px", marginBottom: 16 },
+    label: { fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4, display: "block" },
+    input: { width: "100%", padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)", fontFamily: "'DM Sans',sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+    metaRow: { display: "flex", alignItems: "center", gap: 12, padding: "11px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" },
   }
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "Unknown"
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "long", day: "numeric"
-    })
-  }
+  if (loading) return (
+    <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
+      <Loader2 size={20} className="animate-spin" style={{ color: "#8E7DA5" }} />Loading profile...
+    </div>
+  )
+  if (error) return (
+    <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ color: "#f87171", fontSize: 14 }}>{error}</p>
+    </div>
+  )
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F4F1F7] flex items-center justify-center">
-        <p className="text-gray-500">Loading profile...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#F4F1F7] flex items-center justify-center">
-        <p className="text-red-500">{error}</p>
-      </div>
-    )
-  }
-
-  const roleStyle = ROLE_COLORS[user?.role] || ROLE_COLORS.student
+  const rc = ROLE_COLORS[user?.role] || ROLE_COLORS.student
 
   return (
-    <div className="min-h-screen bg-[#F4F1F7] py-10 px-6">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div style={S.page}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap'); .pp-input::placeholder{color:rgba(255,255,255,0.2);} .pp-input:focus{border-color:rgba(178,152,218,0.5)!important;box-shadow:0 0 0 3px rgba(142,125,165,0.12);}`}</style>
 
-        {/* Profile Header Card */}
-        <div className="bg-gradient-to-r from-[#8E7DA5] to-[#B6A7CC] rounded-2xl p-8 text-white flex items-center gap-6 shadow-lg">
-          <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold shrink-0">
-            {getInitials()}
-          </div>
+      <div style={{ maxWidth: 680, margin: "0 auto" }}>
+
+        {/* Profile header */}
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} style={{ background: "linear-gradient(135deg, rgba(142,125,165,0.2), rgba(110,92,134,0.12))", border: "1px solid rgba(178,152,218,0.15)", borderRadius: 18, padding: "28px", marginBottom: 18, display: "flex", alignItems: "center", gap: 20, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(178,152,218,0.4), transparent)" }} />
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,rgba(142,125,165,0.4),rgba(110,92,134,0.3))", border: "2px solid rgba(178,152,218,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,0.9)", flexShrink: 0 }}>{getInitials()}</div>
           <div>
-            <h1 className="text-3xl font-semibold mb-1">
-              {user?.firstname} {user?.lastname}
-            </h1>
-            <p className="text-purple-200 text-sm mb-3">{user?.email}</p>
-            <span className={`text-xs font-medium px-3 py-1 rounded-full ${roleStyle.bg} ${roleStyle.text} capitalize`}>
-              {user?.role}
-            </span>
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: "rgba(255,255,255,0.92)", marginBottom: 4 }}>{user?.firstname} {user?.lastname}</h1>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 10 }}>{user?.email}</p>
+            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99, background: rc.bg, border: `1px solid ${rc.border}`, color: rc.text, fontWeight: 500, textTransform: "capitalize" }}>{user?.role}</span>
           </div>
+        </motion.div>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: user?.role === "student" ? "1fr 1fr 1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          {[
+            [BookOpen, user?.role === "instructor" ? "Courses Created" : "Courses Enrolled", user?.courseCount ?? 0, "#b298da"],
+            ...(user?.role === "student" ? [[Code, "Exercises Attempted", user?.exerciseCount ?? 0, "#60a5fa"]] : []),
+            [Calendar, "Member Since", formatDate(user?.joinDate), "#4ade80"],
+          ].map(([Icon, label, value, color], i) => (
+            <div key={label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "16px 18px", textAlign: "center" }}>
+              <Icon size={20} color={color} style={{ margin: "0 auto 8px" }} />
+              <p style={{ fontSize: typeof value === "number" ? 20 : 13, fontWeight: 700, color, marginBottom: 4 }}>{value}</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{label}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl shadow p-5 text-center">
-            <BookOpen size={24} className="mx-auto text-[#8E7DA5] mb-2" />
-            <p className="text-2xl font-semibold text-[#3e2764]">{user?.courseCount ?? 0}</p>
-            <p className="text-sm text-gray-400 mt-1">
-              {user?.role === "instructor" ? "Courses Created" : "Courses Enrolled"}
-            </p>
-          </div>
-
-          {user?.role === "student" && (
-            <div className="bg-white rounded-xl shadow p-5 text-center">
-              <Code size={24} className="mx-auto text-[#8E7DA5] mb-2" />
-              <p className="text-2xl font-semibold text-[#3e2764]">{user?.exerciseCount ?? 0}</p>
-              <p className="text-sm text-gray-400 mt-1">Exercises Attempted</p>
+        {/* Info card */}
+        <div style={S.card}>
+          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Account Information</p>
+          {[
+            [User,     "Full Name",      `${user?.firstname} ${user?.lastname}`],
+            [Mail,     "Email Address",  user?.email],
+            [BookOpen, "Role",           user?.role],
+            [Calendar, "Joined",         formatDate(user?.joinDate)],
+          ].map(([Icon, label, value], idx, arr) => (
+            <div key={label} style={{ ...S.metaRow, borderBottom: idx < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+              <Icon size={14} color="#8E7DA5" style={{ flexShrink: 0 }} />
+              <div>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginBottom: 2, textTransform: "capitalize" }}>{label}</p>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)", textTransform: label === "Role" ? "capitalize" : undefined }}>{value}</p>
+              </div>
             </div>
-          )}
-
-          <div className="bg-white rounded-xl shadow p-5 text-center">
-            <Calendar size={24} className="mx-auto text-[#8E7DA5] mb-2" />
-            <p className="text-sm font-semibold text-[#3e2764]">{formatDate(user?.joinDate)}</p>
-            <p className="text-sm text-gray-400 mt-1">Member Since</p>
-          </div>
+          ))}
         </div>
 
-        {/* Info Card */}
-        <div className="bg-white rounded-xl shadow p-6 space-y-4">
-          <h2 className="font-semibold text-[#3e2764] text-lg mb-2">Account Information</h2>
-
-          <div className="flex items-center gap-4 py-3 border-b border-gray-100">
-            <User size={18} className="text-[#8E7DA5] shrink-0" />
-            <div>
-              <p className="text-xs text-gray-400">Full Name</p>
-              <p className="font-medium text-gray-800">{user?.firstname} {user?.lastname}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 py-3 border-b border-gray-100">
-            <Mail size={18} className="text-[#8E7DA5] shrink-0" />
-            <div>
-              <p className="text-xs text-gray-400">Email Address</p>
-              <p className="font-medium text-gray-800">{user?.email}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 py-3 border-b border-gray-100">
-            <BookOpen size={18} className="text-[#8E7DA5] shrink-0" />
-            <div>
-              <p className="text-xs text-gray-400">Role</p>
-              <p className="font-medium text-gray-800 capitalize">{user?.role}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 py-3">
-            <Calendar size={18} className="text-[#8E7DA5] shrink-0" />
-            <div>
-              <p className="text-xs text-gray-400">Joined</p>
-              <p className="font-medium text-gray-800">{formatDate(user?.joinDate)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Change Password Card */}
-        <div className="bg-white rounded-xl shadow p-6">
-          <button
-            onClick={() => {
-              setShowPasswordSection(!showPasswordSection)
-              setPasswordError("")
-              setPasswordSuccess("")
-            }}
-            className="flex items-center gap-3 w-full text-left"
-          >
-            <Lock size={18} className="text-[#8E7DA5]" />
-            <span className="font-semibold text-[#3e2764]">Change Password</span>
-            <span className="ml-auto text-gray-400 text-sm">
-              {showPasswordSection ? "▲" : "▼"}
-            </span>
+        {/* Change password */}
+        <div style={S.card}>
+          <button onClick={() => { setShowPwSection(!showPwSection); setPwError(""); setPwSuccess("") }} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
+            <Lock size={14} color="#8E7DA5" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.75)", fontFamily: "'DM Sans',sans-serif" }}>Change Password</span>
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{showPwSection ? "▲" : "▼"}</span>
           </button>
-
-          {showPasswordSection && (
-            <div className="mt-5 space-y-4">
-              <div className="relative">
-                <label className="text-xs text-gray-400 block mb-1">Current Password</label>
-                <div className="flex items-center border rounded-lg overflow-hidden">
-                  <input
-                    type={showCurrent ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="flex-1 p-3 outline-none text-sm"
-                    placeholder="Enter current password"
-                  />
-                  <button onClick={() => setShowCurrent(!showCurrent)} className="px-3 text-gray-400 hover:text-gray-600">
-                    {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+          <AnimatePresence>
+            {showPwSection && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
+                <div style={{ paddingTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                  {[
+                    ["Current Password", currentPw, setCurrentPw, showCurrent, setShowCurrent],
+                    ["New Password",     newPw,     setNewPw,     showNew,     setShowNew],
+                  ].map(([label, val, setVal, show, setShow]) => (
+                    <div key={label}>
+                      <label style={S.label}>{label}</label>
+                      <div style={{ position: "relative" }}>
+                        <input className="pp-input" type={show ? "text" : "password"} value={val} onChange={e => setVal(e.target.value)} style={{ ...S.input, paddingRight: 40 }} />
+                        <button onClick={() => setShow(!show)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)" }}>
+                          {show ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <div>
+                    <label style={S.label}>Confirm New Password</label>
+                    <input className="pp-input" type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} style={S.input} />
+                  </div>
+                  {pwError   && <p style={{ fontSize: 12, color: "#f87171" }}>{pwError}</p>}
+                  {pwSuccess && <p style={{ fontSize: 12, color: "#4ade80" }}>{pwSuccess}</p>}
+                  <button onClick={handleChangePassword} disabled={changingPw} style={{ padding: "10px", borderRadius: 10, background: "linear-gradient(135deg,#8E7DA5,#6E5C86)", border: "none", color: "white", fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, cursor: changingPw ? "not-allowed" : "pointer", opacity: changingPw ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    {changingPw ? <><Loader2 size={13} className="animate-spin" />Changing...</> : "Update Password"}
                   </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">New Password</label>
-                <div className="flex items-center border rounded-lg overflow-hidden">
-                  <input
-                    type={showNew ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="flex-1 p-3 outline-none text-sm"
-                    placeholder="Enter new password"
-                  />
-                  <button onClick={() => setShowNew(!showNew)} className="px-3 text-gray-400 hover:text-gray-600">
-                    {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full border p-3 rounded-lg text-sm outline-none"
-                  placeholder="Confirm new password"
-                />
-              </div>
-
-              {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
-              {passwordSuccess && <p className="text-green-600 text-sm font-medium">{passwordSuccess}</p>}
-
-              <button
-                onClick={handleChangePassword}
-                disabled={changingPassword}
-                className="w-full bg-[#8E7DA5] text-white py-2.5 rounded-lg hover:bg-[#7B6A96] disabled:opacity-50 text-sm font-medium"
-              >
-                {changingPassword ? "Changing..." : "Update Password"}
-              </button>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        <button
-          onClick={() => navigate(-1)}
-          className="text-sm text-[#6E5C86] hover:text-[#3e2764] font-medium"
-        >
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "rgba(178,152,218,0.6)", fontFamily: "'DM Sans',sans-serif" }}
+          onMouseEnter={e => e.currentTarget.style.color = "#b298da"}
+          onMouseLeave={e => e.currentTarget.style.color = "rgba(178,152,218,0.6)"}>
           ← Go Back
         </button>
-
       </div>
     </div>
   )

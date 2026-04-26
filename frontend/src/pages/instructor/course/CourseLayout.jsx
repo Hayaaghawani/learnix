@@ -1,204 +1,119 @@
 import { Outlet, useParams, NavLink, useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
+import { BookOpen, Users, FileText, BarChart3, Brain, Loader2 } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
-function CourseLayout() {
+const NAV_ITEMS = [
+  { to: "exercises", label: "Exercises",  Icon: BookOpen  },
+  { to: "students",  label: "Students",   Icon: Users     },
+  { to: "material",  label: "Materials",  Icon: FileText  },
+  { to: "ai",        label: "AI Modes",   Icon: Brain     },
+  { to: "analytics", label: "Analytics",  Icon: BarChart3 },
+]
 
+function CourseLayout() {
   const { id } = useParams()
   const navigate = useNavigate()
-
-  const [course, setCourse] = useState(null)
+  const [course, setCourse]   = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError]     = useState("")
 
-  useEffect(() => {
-    fetchCourse()
-  }, [id])
+  useEffect(() => { fetchCourse() }, [id])
 
   const fetchCourse = async () => {
-    setLoading(true)
-    setError('')
-
+    setLoading(true); setError("")
     try {
       const token = localStorage.getItem("token")
-      if (!token) {
-        setError("No authentication token found")
-        setLoading(false)
-        return
-      }
-
-      const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      if (!token) { setError("No authentication token found"); setLoading(false); return }
+      const res = await fetch(`${API_BASE_URL}/courses/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch course: ${response.status}`)
-      }
-
-      const courseData = await response.json()
-      setCourse(courseData)
-    } catch (error) {
-      console.error("Error fetching course:", error)
+      if (!res.ok) throw new Error(`Failed: ${res.status}`)
+      setCourse(await res.json())
+    } catch {
       setError("Failed to load course details")
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
-
-  const linkStyle =
-    "block w-full text-left px-3 py-2 rounded-lg transition"
-
-  const activeStyle =
-    "bg-[#E8E2F1] text-[#6E5C86] font-medium"
-
-  const normalStyle =
-    "text-gray-600 hover:bg-gray-100"
-
-
-
   return (
+    <div style={{ minHeight: "100vh", display: "flex", background: "#120b22", fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
+        .sidebar-link { display:flex; align-items:center; gap:10px; padding:9px 14px; border-radius:10px; font-size:13px; font-weight:400; color:rgba(255,255,255,0.45); transition:all 0.2s; text-decoration:none; }
+        .sidebar-link:hover { color:rgba(255,255,255,0.85); background:rgba(255,255,255,0.06); }
+        .sidebar-link.active { color:rgba(255,255,255,0.92); background:rgba(142,125,165,0.18); border:1px solid rgba(178,152,218,0.2); font-weight:500; }
+        .sidebar-link.active .nav-icon { color:#b298da; }
+        .nav-icon { color:rgba(255,255,255,0.3); transition:color 0.2s; }
+        .sidebar-link:hover .nav-icon { color:rgba(255,255,255,0.7); }
+      `}</style>
 
-    <div className="min-h-screen flex bg-[#F4F1F7]">
-
-      {/* SIDEBAR */}
-
-      <div className="w-64 bg-white shadow-lg p-6">
-
-        <h2 className="text-xl font-semibold text-[#3e2764] mb-6">
-          Course Menu
-        </h2>
-
-        <div className="space-y-2">
-
-          <NavLink
-            to={`/instructor/course/${id}/exercises`}
-            className={({ isActive }) =>
-              `${linkStyle} ${isActive ? activeStyle : normalStyle}`
-            }
-          >
-            Exercises
-          </NavLink>
-
-          <NavLink
-            to={`/instructor/course/${id}/students`}
-            className={({ isActive }) =>
-              `${linkStyle} ${isActive ? activeStyle : normalStyle}`
-            }
-          >
-            Students
-          </NavLink>
-
-          <NavLink
-            to={`/instructor/course/${id}/material`}
-            className={({ isActive }) =>
-              `${linkStyle} ${isActive ? activeStyle : normalStyle}`
-            }
-          >
-            Materials
-          </NavLink>
-
-          <NavLink
-            to={`/instructor/course/${id}/ai`}
-            className={({ isActive }) =>
-              `${linkStyle} ${isActive ? activeStyle : normalStyle}`
-            }
-          >
-            AI Modes
-          </NavLink>
-
-          <NavLink
-            to={`/instructor/course/${id}/analytics`}
-            className={({ isActive }) =>
-              `${linkStyle} ${isActive ? activeStyle : normalStyle}`
-            }
-          >
-            Analytics
-          </NavLink>
-
-        </div>
-
+      {/* ── Sidebar ── */}
+      <div style={{
+        width: 220, flexShrink: 0,
+        background: "rgba(255,255,255,0.03)",
+        borderRight: "1px solid rgba(255,255,255,0.07)",
+        display: "flex", flexDirection: "column",
+        padding: "28px 16px",
+        position: "sticky", top: 57, height: "calc(100vh - 57px)",
+      }}>
+        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 16, paddingLeft: 6 }}>
+          Course
+        </p>
+        <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {NAV_ITEMS.map(({ to, label, Icon }) => (
+            <NavLink
+              key={to}
+              to={`/instructor/course/${id}/${to}`}
+              className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+            >
+              <Icon size={15} className="nav-icon" />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
 
+      {/* ── Content ── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-
-      {/* CONTENT AREA */}
-
-      <div className="flex-1 p-10">
-
-        {/* COURSE HEADER */}
-
-        {loading ? (
-          <div className="bg-white p-6 rounded-xl shadow mb-8">
-            <div className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-8">
-            {error}
-            <button
-              onClick={fetchCourse}
-              className="ml-2 underline hover:no-underline"
-            >
-              Try again
-            </button>
-          </div>
-        ) : course ? (
-
-          <div className="bg-white p-6 rounded-xl shadow mb-8">
-
-            {/* Breadcrumb */}
-
-            <div className="text-sm text-gray-500 mb-2">
-
-              <span
+        {/* Course header strip */}
+        <div style={{
+          background: "rgba(255,255,255,0.03)",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          padding: "14px 32px",
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          {loading ? (
+            <Loader2 size={14} className="animate-spin" style={{ color: "#8E7DA5" }} />
+          ) : error ? (
+            <span style={{ fontSize: 12, color: "#f87171" }}>{error}</span>
+          ) : course ? (
+            <>
+              <button
                 onClick={() => navigate("/instructor")}
-                className="cursor-pointer hover:underline"
+                style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", transition: "color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.7)"}
+                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.3)"}
               >
                 Dashboard
+              </button>
+              <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 12 }}>/</span>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>{course.courseName}</span>
+              <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 12 }}>/</span>
+              <span style={{ fontSize: 12, color: "rgba(178,152,218,0.6)" }}>
+                {course.languageUsed} · {new Date(course.startDate).toLocaleDateString()} – {new Date(course.endDate).toLocaleDateString()}
               </span>
+            </>
+          ) : null}
+        </div>
 
-              {" > "}
-
-              <span className="text-gray-700 font-medium">
-                {course.courseName}
-              </span>
-
-            </div>
-
-
-            {/* Course Info */}
-
-            <h1 className="text-2xl font-semibold text-[#3e2764]">
-
-              {course.courseName}
-
-            </h1>
-
-            <p className="text-gray-500 mt-1">
-
-              {course.languageUsed} • {new Date(course.startDate).toLocaleDateString()} - {new Date(course.endDate).toLocaleDateString()}
-
-            </p>
-
-          </div>
-
-        ) : null}
-
-        {/* PAGE CONTENT */}
-
-        <Outlet />
-
+        {/* Page content */}
+        <div style={{ flex: 1, overflow: "auto", padding: "32px" }}>
+          <Outlet />
+        </div>
       </div>
-
     </div>
-
   )
 }
 

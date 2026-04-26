@@ -1,275 +1,172 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Download, FileText, BookOpen } from "lucide-react";
+// ─────────────────────────────────────────────────────────────────────────────
+// StudentCoursePage.jsx
+// ─────────────────────────────────────────────────────────────────────────────
+import { useState, useEffect } from "react"
+import { useParams, useNavigate } from "react-router-dom"
+import { Download, FileText, BookOpen, Loader2 } from "lucide-react"
+import { motion } from "framer-motion"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+const FILE_ICONS = { pdf: "📄", slides: "📊", doc: "📃", notes: "📝", article: "📰", default: "📁" }
 
-const FILE_ICONS = {
-  pdf: "📄", slides: "📊", doc: "📃",
-  notes: "📝", article: "📰", default: "📁"
-}
+export function StudentCoursePage() {
+  const { courseId } = useParams()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab]   = useState("exercises")
+  const [course, setCourse]         = useState(null)
+  const [exercises, setExercises]   = useState([])
+  const [materials, setMaterials]   = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState("")
 
-function StudentCoursePage() {
-  const { courseId } = useParams();
-  const navigate = useNavigate();
-
-  const [activeTab, setActiveTab] = useState("exercises");
-  const [course, setCourse] = useState(null)
-  const [exercises, setExercises] = useState([])
-  const [materials, setMaterials] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-
-  useEffect(() => {
-    fetchCourseData()
-  }, [courseId])
+  useEffect(() => { fetchCourseData() }, [courseId])
 
   const fetchCourseData = async () => {
-    setLoading(true)
-    setError("")
+    setLoading(true); setError("")
     try {
       const token = localStorage.getItem("token")
       if (!token) { setError("Please log in to view this course."); setLoading(false); return }
-
-      const [courseRes, exercisesRes, materialsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/courses/${courseId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${API_BASE_URL}/exercises/course/${courseId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${API_BASE_URL}/materials/course/${courseId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+      const [courseRes, exRes, matRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/exercises/course/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/materials/course/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
       ])
-
       if (!courseRes.ok) throw new Error("Failed to load course details.")
-
-      const courseData = await courseRes.json()
-      setCourse(courseData)
-
-      if (exercisesRes.ok) {
-        const exercisesData = await exercisesRes.json()
-        setExercises(exercisesData.exercises || [])
-      }
-
-      if (materialsRes.ok) {
-        const materialsData = await materialsRes.json()
-        setMaterials(materialsData.materials || [])
-      }
-
-    } catch (err) {
-      setError("Failed to load course. Please try again.")
-    } finally {
-      setLoading(false)
-    }
+      setCourse(await courseRes.json())
+      if (exRes.ok)  { const d = await exRes.json();  setExercises(d.exercises || []) }
+      if (matRes.ok) { const d = await matRes.json(); setMaterials(d.materials || []) }
+    } catch { setError("Failed to load course. Please try again.") }
+    finally { setLoading(false) }
   }
 
-const handleDownload = (material) => {
-  const link = document.createElement("a")
-  link.href = material.content
-  link.download = material.filename
-  link.click()
-}
-
-const handleView = (material) => {
-  // Convert base64 data URL to blob and open in new tab
-  const base64 = material.content.split(",")[1]
-  const mimeType = material.content.split(";")[0].split(":")[1]
-  const byteCharacters = atob(base64)
-  const byteNumbers = new Array(byteCharacters.length)
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i)
+  const handleDownload = (material) => {
+    const link = document.createElement("a"); link.href = material.content; link.download = material.filename; link.click()
   }
-  const byteArray = new Uint8Array(byteNumbers)
-  const blob = new Blob([byteArray], { type: mimeType })
-  const blobUrl = URL.createObjectURL(blob)
-  window.open(blobUrl, "_blank")
-}
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F4F1F7] flex items-center justify-center">
-        <p className="text-gray-500">Loading course...</p>
-      </div>
-    )
+  const handleView = (material) => {
+    const base64 = material.content.split(",")[1]; const mimeType = material.content.split(";")[0].split(":")[1]
+    const bytes = atob(base64); const arr = new Uint8Array(bytes.length)
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
+    window.open(URL.createObjectURL(new Blob([arr], { type: mimeType })), "_blank")
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#F4F1F7] flex items-center justify-center">
-        <p className="text-red-500">{error}</p>
-      </div>
-    )
-  }
+  const S = { page: { minHeight: "100vh", background: "#120b22", fontFamily: "'DM Sans', sans-serif" }, card: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "20px 22px" } }
+
+  if (loading) return (
+    <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
+      <Loader2 size={20} className="animate-spin" style={{ color: "#8E7DA5" }} />Loading course...
+    </div>
+  )
+  if (error) return (
+    <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ color: "#f87171", fontSize: 14, fontFamily: "'DM Sans',sans-serif" }}>{error}</p>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-[#F4F1F7]">
+    <div style={S.page}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');`}</style>
 
-      {/* Course Banner — same style as instructor dashboard header */}
-      <div className="bg-gradient-to-r from-[#8E7DA5] to-[#B6A7CC] text-white px-10 py-8 flex justify-between items-center shadow-md">
+      {/* Banner */}
+      <div style={{ background: "linear-gradient(135deg, rgba(142,125,165,0.22), rgba(110,92,134,0.14))", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "28px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(178,152,218,0.4), transparent)" }} />
         <div>
-          <p className="text-purple-200 text-sm mb-1 font-medium uppercase tracking-widest">
-            {course?.languageUsed || "Course"}
-          </p>
-          <h1 className="text-3xl font-semibold mb-1">
-            {course?.courseName || "Course"}
-          </h1>
-          <p className="text-purple-200 text-sm">
-            {course?.startDate && course?.endDate
-              ? `${new Date(course.startDate).toLocaleDateString()} — ${new Date(course.endDate).toLocaleDateString()}`
-              : ""}
+          <p style={{ fontSize: 10, color: "rgba(178,152,218,0.6)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 6 }}>{course?.languageUsed || "Course"}</p>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: "rgba(255,255,255,0.92)", marginBottom: 4 }}>{course?.courseName}</h1>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+            {course?.startDate && course?.endDate ? `${new Date(course.startDate).toLocaleDateString()} — ${new Date(course.endDate).toLocaleDateString()}` : ""}
           </p>
         </div>
-        <button
-          onClick={() => navigate(`/student/course/${courseId}/report`)}
-          className="bg-white text-[#6E5C86] px-5 py-2.5 rounded-lg font-medium hover:bg-gray-100 transition shadow"
-        >
-          View My Report
-        </button>
+        <button onClick={() => navigate(`/student/course/${courseId}/report`)} style={{ padding: "10px 20px", borderRadius: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.8)", fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; e.currentTarget.style.color = "white" }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.8)" }}
+        >View My Report</button>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 40px" }}>
 
-        {/* Course Description */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-2">Course Description</h2>
-          <p className="text-gray-600">
-            {course?.description || "No description available."}
-          </p>
+        {/* Description */}
+        <div style={{ ...S.card, marginBottom: 24 }}>
+          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Course Description</p>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7 }}>{course?.description || "No description available."}</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setActiveTab("exercises")}
-            className={`px-5 py-2 rounded-lg font-medium transition ${
-              activeTab === "exercises"
-                ? "bg-[#6E5C86] text-white"
-                : "bg-white shadow hover:bg-gray-50"
-            }`}
-          >
-            Exercises
-            {exercises.length > 0 && (
-              <span className="ml-2 text-xs opacity-75">({exercises.length})</span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("materials")}
-            className={`px-5 py-2 rounded-lg font-medium transition ${
-              activeTab === "materials"
-                ? "bg-[#6E5C86] text-white"
-                : "bg-white shadow hover:bg-gray-50"
-            }`}
-          >
-            Materials
-            {materials.length > 0 && (
-              <span className="ml-2 text-xs opacity-75">({materials.length})</span>
-            )}
-          </button>
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {[["exercises", `Exercises (${exercises.length})`], ["materials", `Materials (${materials.length})`]].map(([tab, label]) => (
+            <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: "9px 20px", borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", background: activeTab === tab ? "linear-gradient(135deg,#8E7DA5,#6E5C86)" : "rgba(255,255,255,0.04)", border: activeTab === tab ? "1px solid rgba(178,152,218,0.3)" : "1px solid rgba(255,255,255,0.08)", color: activeTab === tab ? "white" : "rgba(255,255,255,0.4)", transition: "all 0.2s" }}>{label}</button>
+          ))}
         </div>
 
-        {/* Exercises Tab */}
+        {/* Exercises */}
         {activeTab === "exercises" && (
-          <>
-            {exercises.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-md p-12 flex flex-col items-center text-center">
-                <BookOpen size={48} className="text-gray-300 mb-4" />
-                <p className="text-gray-500">No exercises available yet.</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-6">
-                {exercises.map((exercise) => (
-                  <div
-                    key={exercise.exerciseId}
-                    className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition"
+          exercises.length === 0 ? (
+            <div style={{ ...S.card, textAlign: "center", padding: "48px" }}>
+              <BookOpen size={36} style={{ color: "rgba(255,255,255,0.1)", margin: "0 auto 12px" }} />
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>No exercises available yet.</p>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              {exercises.map((ex, i) => {
+                const preview = (ex.problem || "").trim().replace(/\s+/g, " ")
+                return (
+                  <motion.div key={ex.exerciseId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} style={{ ...S.card, cursor: "default", transition: "all 0.25s" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.borderColor = "rgba(178,152,218,0.2)" }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)" }}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-lg">{exercise.title}</h3>
-                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full capitalize">
-                        {exercise.exerciseType}
-                      </span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                      <h3 style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{ex.title}</h3>
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: "rgba(142,125,165,0.12)", border: "1px solid rgba(142,125,165,0.2)", color: "#b298da", textTransform: "capitalize", whiteSpace: "nowrap", marginLeft: 8 }}>{ex.exerciseType}</span>
                     </div>
-                    <p className="text-gray-600 text-sm mb-1 line-clamp-2">
-                      {(() => {
-                        const p = (exercise.problem || "").trim().replace(/\s+/g, " ")
-                        return p
-                          ? `${p.slice(0, 140)}${p.length > 140 ? "…" : ""}`
-                          : "Open to view the problem statement."
-                      })()}
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6, marginBottom: 10, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                      {preview ? `${preview.slice(0, 140)}${preview.length > 140 ? "…" : ""}` : "Open to view the problem statement."}
                     </p>
-                    <p className="text-gray-400 text-sm mb-4">
-                      Due: {exercise.dueDate
-                        ? new Date(exercise.dueDate).toLocaleDateString()
-                        : "No due date"}
-                    </p>
-                    <button
-                      onClick={() => navigate(`/exercise/${exercise.exerciseId}/workspace`)}
-                      className="bg-[#6E5C86] text-white px-4 py-2 rounded-lg hover:bg-[#5a4a70] transition"
-                    >
-                      Open Exercise →
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginBottom: 14 }}>Due: {ex.dueDate ? new Date(ex.dueDate).toLocaleDateString() : "No due date"}</p>
+                    <button onClick={() => navigate(`/exercise/${ex.exerciseId}/workspace`)} style={{ padding: "8px 16px", borderRadius: 8, background: "linear-gradient(135deg,#8E7DA5,#6E5C86)", border: "1px solid rgba(178,152,218,0.25)", color: "white", fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 14px rgba(110,92,134,0.4)"}
+                      onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
+                    >Open Exercise →</button>
+                  </motion.div>
+                )
+              })}
+            </div>
+          )
+        )}
+
+        {/* Materials */}
+        {activeTab === "materials" && (
+          materials.length === 0 ? (
+            <div style={{ ...S.card, textAlign: "center", padding: "48px" }}>
+              <FileText size={36} style={{ color: "rgba(255,255,255,0.1)", margin: "0 auto 12px" }} />
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>No materials uploaded yet.</p>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              {materials.map((mat, i) => (
+                <motion.div key={mat.materialId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} style={S.card}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 16 }}>
+                    <span style={{ fontSize: 28 }}>{FILE_ICONS[mat.filetype] || FILE_ICONS.default}</span>
+                    <div>
+                      <h3 style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginBottom: 4 }}>{mat.title}</h3>
+                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 6 }}>{mat.filename}</p>
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)", textTransform: "capitalize" }}>{mat.filetype}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {mat.filetype === "pdf" && (
+                      <button onClick={() => handleView(mat)} style={{ flex: 1, padding: "8px", borderRadius: 8, background: "linear-gradient(135deg,#8E7DA5,#6E5C86)", border: "none", color: "white", fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>View</button>
+                    )}
+                    <button onClick={() => handleDownload(mat)} style={{ flex: 1, padding: "8px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(178,152,218,0.8)", fontFamily: "'DM Sans',sans-serif", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      <Download size={13} />Download
                     </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </>
+                </motion.div>
+              ))}
+            </div>
+          )
         )}
-
-        {/* Materials Tab — real data from DB */}
-        {activeTab === "materials" && (
-          <>
-            {materials.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-md p-12 flex flex-col items-center text-center">
-                <FileText size={48} className="text-gray-300 mb-4" />
-                <p className="text-gray-500">No materials uploaded yet.</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-6">
-                {materials.map((material) => (
-                  <div
-                    key={material.materialId}
-                    className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition"
-                  >
-                    <div className="flex items-start gap-4">
-                      <span className="text-4xl">
-                        {FILE_ICONS[material.filetype] || FILE_ICONS.default}
-                      </span>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1">{material.title}</h3>
-                        <p className="text-gray-400 text-sm mb-1">{material.filename}</p>
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">
-                          {material.filetype}
-                        </span>
-                      </div>
-                    </div>
-
-              <div className="flex gap-3 mt-5">
-                  {material.filetype === "pdf" && (
-  <button
-    onClick={() => handleView(material)}
-    className="flex-1 text-center bg-[#6E5C86] text-white px-4 py-2 rounded-lg hover:bg-[#5a4a70] text-sm transition"
-  >
-    View
-  </button>
-)}
-                      <button
-                        onClick={() => handleDownload(material)}
-                        className="flex-1 flex items-center justify-center gap-2 border border-[#6E5C86] text-[#6E5C86] px-4 py-2 rounded-lg hover:bg-purple-50 text-sm transition"
-                      >
-                        <Download size={15} /> Download
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
       </div>
     </div>
-  );
+  )
 }
 
-export default StudentCoursePage;
+export default StudentCoursePage

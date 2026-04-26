@@ -1,461 +1,273 @@
-import React, { useState, useEffect } from "react"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts"
+import { useState, useEffect } from "react"
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts"
+import { Users, BookOpen, GraduationCap, Loader2, Plus, ToggleLeft, Trash2 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+const COLORS = ["#8E7DA5", "#b298da"]
 
 function AdminDashboard() {
-
-  const [users, setUsers] = useState([])
-  const [courses, setCourses] = useState([])
-  const [logs, setLogs] = useState([])
-  const [stats, setStats] = useState({})
+  const [users, setUsers]           = useState([])
+  const [courses, setCourses]       = useState([])
+  const [stats, setStats]           = useState({})
   const [inviteEmail, setInviteEmail] = useState("")
-  const [inviteRole, setInviteRole] = useState("Student")
+  const [inviteRole, setInviteRole]   = useState("Student")
+  const [settings, setSettings]     = useState({ aiModel: "GPT-4o", hintLimit: 5, executionTimeout: 5 })
+  const [error, setError]           = useState("")
+  const [notice, setNotice]         = useState("")
+  const [loading, setLoading]       = useState(true)
 
-  const [settings, setSettings] = useState({
-    aiModel: "GPT-4o",
-    hintLimit: 5,
-    executionTimeout: 5
-  })
-  const [error, setError] = useState("")
-  const [notice, setNotice] = useState("")
-
-  const COLORS = ["#8B5CF6", "#A78BFA"]
-
-  const getAuthHeaders = () => {
+  const getHeaders = () => {
     const token = localStorage.getItem("token")
-    return {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    }
+    return { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }
   }
 
-  const parseResponse = async (res, fallbackMessage) => {
+  const parseResponse = async (res, fallback) => {
     const data = await res.json()
-    if (!res.ok) {
-      throw new Error(data?.detail || fallbackMessage)
-    }
+    if (!res.ok) throw new Error(data?.detail || fallback)
     return data
   }
 
   useEffect(() => {
     const loadData = async () => {
-      setError("")
-      try {
-        await Promise.all([fetchStats(), fetchUsers(), fetchCourses(), fetchLogs()])
-      } catch (err) {
-        setError(err.message || "Failed to load admin dashboard data.")
-      }
+      setLoading(true); setError("")
+      try { await Promise.all([fetchStats(), fetchUsers(), fetchCourses()]) }
+      catch (err) { setError(err.message || "Failed to load admin dashboard data.") }
+      finally { setLoading(false) }
     }
-
     loadData()
   }, [])
 
-  const fetchStats = async () => {
-    const res = await fetch(`${API_BASE_URL}/admin/stats`, {
-      headers: getAuthHeaders(),
-    })
-    const data = await parseResponse(res, "Failed to load stats")
-    setStats(data)
-  }
-
-  const fetchUsers = async () => {
-    const res = await fetch(`${API_BASE_URL}/admin/users`, {
-      headers: getAuthHeaders(),
-    })
-    const data = await parseResponse(res, "Failed to load users")
-    setUsers(data.users || [])
-  }
-
-  const fetchCourses = async () => {
-    const res = await fetch(`${API_BASE_URL}/admin/courses`, {
-      headers: getAuthHeaders(),
-    })
-    const data = await parseResponse(res, "Failed to load courses")
-    setCourses(data.courses || [])
-  }
-
-  const fetchLogs = async () => {
-    const res = await fetch(`${API_BASE_URL}/admin/logs`, {
-      headers: getAuthHeaders(),
-    })
-    const data = await parseResponse(res, "Failed to load logs")
-    setLogs(data.logs || [])
-  }
+  const fetchStats   = async () => { const d = await parseResponse(await fetch(`${API_BASE_URL}/admin/stats`,   { headers: getHeaders() }), "Failed to load stats");   setStats(d) }
+  const fetchUsers   = async () => { const d = await parseResponse(await fetch(`${API_BASE_URL}/admin/users`,   { headers: getHeaders() }), "Failed to load users");   setUsers(d.users || []) }
+  const fetchCourses = async () => { const d = await parseResponse(await fetch(`${API_BASE_URL}/admin/courses`, { headers: getHeaders() }), "Failed to load courses"); setCourses(d.courses || []) }
 
   const sendInvite = async () => {
     if (!inviteEmail) return
-
-    const res = await fetch(`${API_BASE_URL}/admin/invite-user`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        email: inviteEmail,
-        role: inviteRole.toLowerCase()
-      })
-    })
-
-    const data = await parseResponse(res, "Failed to invite user")
-
-    setInviteEmail("")
-    setNotice(`Invite sent. Temporary password: ${data.temporaryPassword}`)
-    await Promise.all([fetchUsers(), fetchStats()])
+    try {
+      const d = await parseResponse(await fetch(`${API_BASE_URL}/admin/invite-user`, { method: "POST", headers: getHeaders(), body: JSON.stringify({ email: inviteEmail, role: inviteRole.toLowerCase() }) }), "Failed to invite user")
+      setInviteEmail(""); setNotice(`Invite sent. Temporary password: ${d.temporaryPassword}`)
+      await Promise.all([fetchUsers(), fetchStats()])
+      setTimeout(() => setNotice(""), 6000)
+    } catch (err) { setError(err.message) }
   }
 
   const toggleUserStatus = async (id, active) => {
-    const res = await fetch(`${API_BASE_URL}/admin/user/${id}/status`, {
-      method: "PATCH",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ active: !active })
-    })
-
-    await parseResponse(res, "Failed to update user status")
-
-    await fetchUsers()
+    try { await parseResponse(await fetch(`${API_BASE_URL}/admin/user/${id}/status`, { method: "PATCH", headers: getHeaders(), body: JSON.stringify({ active: !active }) }), "Failed to update user status"); await fetchUsers() }
+    catch (err) { setError(err.message) }
   }
 
   const deleteUser = async (id) => {
-    const res = await fetch(`${API_BASE_URL}/admin/user/${id}`, {
-      method: "DELETE",
-      headers: getAuthHeaders(),
-    })
-
-    await parseResponse(res, "Failed to delete user")
-
-    await Promise.all([fetchUsers(), fetchStats()])
+    try { await parseResponse(await fetch(`${API_BASE_URL}/admin/user/${id}`, { method: "DELETE", headers: getHeaders() }), "Failed to delete user"); await Promise.all([fetchUsers(), fetchStats()]) }
+    catch (err) { setError(err.message) }
   }
 
   const saveSettings = async () => {
-    const res = await fetch(`${API_BASE_URL}/admin/settings`, {
-      method: "PATCH",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(settings)
-    })
-
-    await parseResponse(res, "Failed to save settings")
-    setNotice("Settings saved")
+    try { await parseResponse(await fetch(`${API_BASE_URL}/admin/settings`, { method: "PATCH", headers: getHeaders(), body: JSON.stringify(settings) }), "Failed to save settings"); setNotice("Settings saved successfully"); setTimeout(() => setNotice(""), 3000) }
+    catch (err) { setError(err.message) }
   }
 
   const userChart = [
-    { name: "Students", value: stats.students || 0 },
-    { name: "Instructors", value: stats.instructors || 0 }
+    { name: "Students",    value: stats.students    || 0 },
+    { name: "Instructors", value: stats.instructors || 0 },
   ]
 
+  const S = {
+    card:   { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "22px 24px", marginBottom: 16 },
+    label:  { fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 7, fontFamily: "'DM Sans',sans-serif" },
+    input:  { width: "100%", padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)", fontFamily: "'DM Sans',sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box", transition: "border-color 0.2s" },
+    secLabel: { fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 18, display: "block", fontFamily: "'DM Sans',sans-serif" },
+    th:     { padding: "10px 14px", fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, textAlign: "left", fontFamily: "'DM Sans',sans-serif" },
+    td:     { padding: "11px 14px", fontSize: 13, color: "rgba(255,255,255,0.6)", fontFamily: "'DM Sans',sans-serif", borderBottom: "1px solid rgba(255,255,255,0.05)" },
+  }
+
+  const btnPrimary = { padding: "9px 20px", borderRadius: 10, background: "linear-gradient(135deg,#8E7DA5,#6E5C86)", border: "1px solid rgba(178,152,218,0.25)", color: "white", fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }
+
   return (
-    <div className="p-6 space-y-10">
+    <div style={{ minHeight: "100vh", background: "#120b22", fontFamily: "'DM Sans', sans-serif", position: "relative" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap'); .adm-input::placeholder{color:rgba(255,255,255,0.2);} .adm-input:focus{border-color:rgba(178,152,218,0.5)!important;box-shadow:0 0 0 3px rgba(142,125,165,0.12);} option{background:#1e0f38;color:rgba(255,255,255,0.8);}`}</style>
 
-      <h1 className="text-3xl font-bold text-purple-600">
-        Admin Dashboard
-      </h1>
-
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {notice && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          {notice}
-        </div>
-      )}
-
-      {/* SYSTEM OVERVIEW */}
-
-      <div className="grid grid-cols-4 gap-6">
-
-        <div className="bg-white p-5 rounded-xl shadow">
-          <p className="text-gray-500">Users</p>
-          <p className="text-2xl font-semibold">{stats.users || 0}</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow">
-          <p className="text-gray-500">Students</p>
-          <p className="text-2xl font-semibold">{stats.students || 0}</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow">
-          <p className="text-gray-500">Instructors</p>
-          <p className="text-2xl font-semibold">{stats.instructors || 0}</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow">
-          <p className="text-gray-500">Courses</p>
-          <p className="text-2xl font-semibold">{stats.courses || 0}</p>
-        </div>
-
+      {/* Background orbs */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -100, left: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(110,92,134,0.16) 0%, transparent 70%)" }} />
+        <div style={{ position: "absolute", bottom: -80, right: -80, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(62,39,100,0.18) 0%, transparent 70%)" }} />
       </div>
 
-      {/* USER DISTRIBUTION CHART */}
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "36px 40px 60px" }}>
 
-      <div className="bg-white p-6 rounded-xl shadow">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 28 }}>
+          <p style={{ fontSize: 11, color: "rgba(178,152,218,0.6)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>System</p>
+          <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.92)" }}>Admin Dashboard</h1>
+        </motion.div>
 
-        <h2 className="text-xl font-semibold mb-4">
-          User Distribution
-        </h2>
+        {/* Alerts */}
+        <AnimatePresence>
+          {error  && <motion.div initial={{ opacity:0,height:0 }} animate={{ opacity:1,height:"auto" }} exit={{ opacity:0,height:0 }} style={{ background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:10, padding:"12px 16px", color:"#f87171", fontSize:13, marginBottom:16 }}>{error}</motion.div>}
+          {notice && <motion.div initial={{ opacity:0,height:0 }} animate={{ opacity:1,height:"auto" }} exit={{ opacity:0,height:0 }} style={{ background:"rgba(34,197,94,0.08)", border:"1px solid rgba(34,197,94,0.2)", borderRadius:10, padding:"12px 16px", color:"#4ade80", fontSize:13, marginBottom:16 }}>{notice}</motion.div>}
+        </AnimatePresence>
 
-        <ResponsiveContainer width="100%" height={250}>
-          <PieChart>
-            <Pie
-              data={userChart}
-              dataKey="value"
-              nameKey="name"
-              outerRadius={80}
-              label
-            >
-              {userChart.map((entry, index) => (
-                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+        {loading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "60px 0" }}>
+            <Loader2 size={22} className="animate-spin" style={{ color: "#8E7DA5" }} /> Loading dashboard...
+          </div>
+        ) : (
+          <>
+            {/* Stat cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
+              {[
+                [Users,          "Total Users",   stats.users       || 0, "#b298da"],
+                [GraduationCap,  "Students",      stats.students    || 0, "#60a5fa"],
+                [Users,          "Instructors",   stats.instructors || 0, "#fb923c"],
+                [BookOpen,       "Courses",       stats.courses     || 0, "#4ade80"],
+              ].map(([Icon, label, value, color], i) => (
+                <motion.div key={label} initial={{ opacity:0,y:12 }} animate={{ opacity:1,y:0 }} transition={{ delay: i*0.06 }} style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:14, padding:"18px 20px", display:"flex", alignItems:"center", gap:14 }}>
+                  <Icon size={20} color={color} />
+                  <div>
+                    <p style={{ fontSize:11, color:"rgba(255,255,255,0.3)", marginBottom:4 }}>{label}</p>
+                    <p style={{ fontSize:22, fontWeight:700, color }}>{value}</p>
+                  </div>
+                </motion.div>
               ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+            </div>
 
-      </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
 
-      {/* INVITE USER */}
+              {/* Pie chart */}
+              <div style={S.card}>
+                <span style={S.secLabel}>User Distribution</span>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={userChart} dataKey="value" nameKey="name" outerRadius={80} label={({ name, value }) => `${name}: ${value}`}>
+                      {userChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background:"rgba(28,16,50,0.95)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, color:"rgba(255,255,255,0.8)", fontSize:12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
 
-      <div className="bg-white p-6 rounded-xl shadow space-y-4">
-
-        <h2 className="text-xl font-semibold">
-          Invite User
-        </h2>
-
-        <div className="flex gap-4">
-
-          <input
-            className="border p-2 rounded w-full"
-            placeholder="Email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-          />
-
-          <select
-            className="border p-2 rounded"
-            value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value)}
-          >
-            <option>Student</option>
-            <option>Instructor</option>
-          </select>
-
-          <button
-            onClick={sendInvite}
-            className="bg-purple-600 text-white px-4 rounded"
-          >
-            Send Invite
-          </button>
-
-        </div>
-
-      </div>
-
-      {/* USERS TABLE */}
-
-      <div className="bg-white p-6 rounded-xl shadow">
-
-        <h2 className="text-xl font-semibold mb-4">
-          Users
-        </h2>
-
-        <table className="w-full">
-
-          <thead className="text-left border-b">
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-
-            {users.map((u) => (
-
-              <tr key={u.id} className="border-b">
-
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>{u.role}</td>
-                <td>
-                  {u.active ? "Active" : "Inactive"}
-                </td>
-
-                <td className="space-x-2">
-
-                  <button
-                    onClick={() => toggleUserStatus(u.id, u.active)}
-                    className="text-blue-600"
+              {/* Invite user */}
+              <div style={S.card}>
+                <span style={S.secLabel}>Invite User</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div>
+                    <label style={S.label}>Email Address</label>
+                    <input className="adm-input" type="email" placeholder="user@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} style={S.input} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Role</label>
+                    <select className="adm-input" value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ ...S.input, cursor: "pointer" }}>
+                      <option>Student</option>
+                      <option>Instructor</option>
+                    </select>
+                  </div>
+                  <button onClick={sendInvite} style={{ ...btnPrimary, display: "flex", alignItems: "center", gap: 7, width: "fit-content", marginTop: 4 }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = "0 6px 20px rgba(110,92,134,0.4)"}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
                   >
-                    Toggle
+                    <Plus size={14} /> Send Invite
                   </button>
+                </div>
+              </div>
+            </div>
 
-                  <button
-                    onClick={() => deleteUser(u.id)}
-                    className="text-red-600"
-                  >
-                    Delete
-                  </button>
+            {/* Users table */}
+            <div style={{ ...S.card, marginBottom: 16 }}>
+              <span style={S.secLabel}>Users</span>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                      {["Name", "Email", "Role", "Status", "Actions"].map(h => <th key={h} style={S.th}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.length === 0 ? (
+                      <tr><td colSpan={5} style={{ ...S.td, textAlign: "center", color: "rgba(255,255,255,0.2)", padding: "24px" }}>No users found</td></tr>
+                    ) : users.map(u => (
+                      <tr key={u.id} style={{ transition: "background 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <td style={S.td}>{u.name}</td>
+                        <td style={{ ...S.td, color: "rgba(255,255,255,0.4)" }}>{u.email}</td>
+                        <td style={S.td}><span style={{ fontSize:10, padding:"2px 8px", borderRadius:99, background:"rgba(142,125,165,0.12)", border:"1px solid rgba(142,125,165,0.2)", color:"#b298da", textTransform:"capitalize" }}>{u.role}</span></td>
+                        <td style={S.td}><span style={{ fontSize:10, padding:"2px 8px", borderRadius:99, background: u.active ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border:`1px solid ${u.active ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, color: u.active ? "#4ade80" : "#f87171" }}>{u.active ? "Active" : "Inactive"}</span></td>
+                        <td style={S.td}>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => toggleUserStatus(u.id, u.active)} style={{ padding: "4px 10px", borderRadius: 7, background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", color: "#60a5fa", fontSize: 11, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", display: "flex", alignItems: "center", gap: 5 }}><ToggleLeft size={12} />Toggle</button>
+                            <button onClick={() => deleteUser(u.id)} style={{ padding: "4px 10px", borderRadius: 7, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)", color: "#f87171", fontSize: 11, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", display: "flex", alignItems: "center", gap: 5 }}><Trash2 size={12} />Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-                </td>
+            {/* Courses table */}
+            <div style={{ ...S.card, marginBottom: 16 }}>
+              <span style={S.secLabel}>Course Monitoring</span>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                      {["Course", "Instructor", "Students", "Status"].map(h => <th key={h} style={S.th}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courses.length === 0 ? (
+                      <tr><td colSpan={4} style={{ ...S.td, textAlign: "center", color: "rgba(255,255,255,0.2)", padding: "24px" }}>No courses found</td></tr>
+                    ) : courses.map(c => (
+                      <tr key={c.id} style={{ transition: "background 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <td style={{ ...S.td, fontWeight: 500, color: "rgba(255,255,255,0.75)" }}>{c.name}</td>
+                        <td style={S.td}>{c.instructor}</td>
+                        <td style={S.td}>{c.students}</td>
+                        <td style={S.td}><span style={{ fontSize:10, padding:"2px 8px", borderRadius:99, background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.2)", color:"#4ade80" }}>{c.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-              </tr>
+            {/* System settings */}
+            <div style={S.card}>
+              <span style={S.secLabel}>System Settings</span>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 16 }}>
+                <div>
+                  <label style={S.label}>AI Model</label>
+                  <select className="adm-input" value={settings.aiModel} onChange={e => setSettings({ ...settings, aiModel: e.target.value })} style={{ ...S.input, cursor: "pointer" }}>
+                    <option>GPT-4o</option>
+                    <option>Claude</option>
+                    <option>Gemini</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={S.label}>Hint Limit</label>
+                  <input className="adm-input" type="number" value={settings.hintLimit} onChange={e => setSettings({ ...settings, hintLimit: e.target.value })} style={S.input} />
+                </div>
+                <div>
+                  <label style={S.label}>Execution Timeout (s)</label>
+                  <input className="adm-input" type="number" value={settings.executionTimeout} onChange={e => setSettings({ ...settings, executionTimeout: e.target.value })} style={S.input} />
+                </div>
+              </div>
+              <button onClick={saveSettings} style={btnPrimary}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = "0 6px 20px rgba(110,92,134,0.4)"}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
+              >
+                Save Settings
+              </button>
+            </div>
 
-            ))}
-
-          </tbody>
-
-        </table>
-
+            {/* Security logs — intentionally hidden */}
+          </>
+        )}
       </div>
-
-      {/* COURSE MONITORING */}
-
-      <div className="bg-white p-6 rounded-xl shadow">
-
-        <h2 className="text-xl font-semibold mb-4">
-          Courses
-        </h2>
-
-        <table className="w-full">
-
-          <thead className="border-b text-left">
-            <tr>
-              <th>Course</th>
-              <th>Instructor</th>
-              <th>Students</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-
-            {courses.map((c) => (
-
-              <tr key={c.id} className="border-b">
-
-                <td>{c.name}</td>
-                <td>{c.instructor}</td>
-                <td>{c.students}</td>
-                <td>{c.status}</td>
-
-              </tr>
-
-            ))}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-      {/* SYSTEM SETTINGS */}
-
-      <div className="bg-white p-6 rounded-xl shadow space-y-4">
-
-        <h2 className="text-xl font-semibold">
-          System Settings
-        </h2>
-
-        <div className="grid grid-cols-3 gap-6">
-
-          <div>
-            <label className="text-sm text-gray-600">
-              AI Model
-            </label>
-
-            <select
-              className="border p-2 rounded w-full"
-              value={settings.aiModel}
-              onChange={(e) =>
-                setSettings({ ...settings, aiModel: e.target.value })
-              }
-            >
-              <option>GPT-4o</option>
-              <option>Claude</option>
-              <option>Gemini</option>
-            </select>
-
-          </div>
-
-          <div>
-            <label className="text-sm text-gray-600">
-              Hint Limit
-            </label>
-
-            <input
-              type="number"
-              className="border p-2 rounded w-full"
-              value={settings.hintLimit}
-              onChange={(e) =>
-                setSettings({ ...settings, hintLimit: e.target.value })
-              }
-            />
-          </div>
-
-          <div>
-            <label className="text-sm text-gray-600">
-              Execution Timeout (s)
-            </label>
-
-            <input
-              type="number"
-              className="border p-2 rounded w-full"
-              value={settings.executionTimeout}
-              onChange={(e) =>
-                setSettings({ ...settings, executionTimeout: e.target.value })
-              }
-            />
-          </div>
-
-        </div>
-
-        <button
-          onClick={saveSettings}
-          className="bg-purple-600 text-white px-6 py-2 rounded"
-        >
-          Save Settings
-        </button>
-
-      </div>
-
-      {/* SECURITY LOGS */}
-
-      <div className="bg-white p-6 rounded-xl shadow">
-
-        <h2 className="text-xl font-semibold mb-4">
-          Security Logs
-        </h2>
-
-        <ul className="space-y-2">
-
-          {logs.map((log, i) => (
-
-            <li
-              key={i}
-              className="border p-3 rounded text-sm text-gray-700"
-            >
-              {log.message}
-            </li>
-
-          ))}
-
-        </ul>
-
-      </div>
-
     </div>
   )
 }

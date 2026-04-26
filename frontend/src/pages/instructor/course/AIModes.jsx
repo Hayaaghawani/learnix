@@ -1,68 +1,86 @@
 import { useParams } from "react-router-dom"
 import { useState, useEffect, useCallback } from "react"
-import { ChevronDown, ChevronUp, Plus, Loader2, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronUp, Plus, Loader2, Trash2, X } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 const DEFAULT_MODES = [
-  { name: "Beginner", description: "Full hints allowed. AI provides conceptual explanations, guiding questions, and partial code. Ideal for students new to programming.", hintLimit: 5, cooldown: 10, strictLevel: 1 },
-  { name: "Intermediate", description: "Partial hints only. AI gives guiding questions and pseudocode but avoids direct code fragments. For students with basic knowledge.", hintLimit: 3, cooldown: 20, strictLevel: 2 },
-  { name: "Senior", description: "Minimal guidance. AI only confirms or denies logic direction. Students are expected to solve most issues independently.", hintLimit: 2, cooldown: 30, strictLevel: 3 },
-  { name: "Professional", description: "No AI help. Students must solve exercises entirely on their own. AI is disabled for hint requests.", hintLimit: 0, cooldown: 0, strictLevel: 4 },
+  { name: "Beginner",      description: "Full hints allowed. AI provides conceptual explanations, guiding questions, and partial code.",       hintLimit: 5, cooldown: 10, strictLevel: 1 },
+  { name: "Intermediate",  description: "Partial hints only. AI gives guiding questions and pseudocode but avoids direct code fragments.",     hintLimit: 3, cooldown: 20, strictLevel: 2 },
+  { name: "Senior",        description: "Minimal guidance. AI only confirms or denies logic direction.",                                       hintLimit: 2, cooldown: 30, strictLevel: 3 },
+  { name: "Professional",  description: "No AI help. Students must solve exercises entirely on their own.",                                    hintLimit: 0, cooldown: 0,  strictLevel: 4 },
 ]
 
 const POLICY_OPTIONS = [
   { value: "after_submission", label: "After submission" },
-  { value: "never", label: "Never show full solution" },
-  { value: "after_deadline", label: "Only after deadline" },
-  { value: "partial_only", label: "Partial logic only" },
+  { value: "never",            label: "Never show full solution" },
+  { value: "after_deadline",   label: "Only after deadline" },
+  { value: "partial_only",     label: "Partial logic only" },
 ]
 
+// ── Toggle ────────────────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${checked ? "bg-[#6E5C86]" : "bg-gray-200"}`}
-    >
-      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${checked ? "translate-x-5" : "translate-x-0"}`} />
+    <button type="button" onClick={() => onChange(!checked)} style={{
+      position: "relative", width: 44, height: 24, borderRadius: 99,
+      background: checked ? "#6E5C86" : "rgba(255,255,255,0.1)",
+      border: "none", cursor: "pointer", transition: "background 0.2s", flexShrink: 0,
+    }}>
+      <span style={{
+        position: "absolute", top: 3, left: checked ? 23 : 3,
+        width: 18, height: 18, borderRadius: "50%", background: "white",
+        transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+      }} />
     </button>
   )
 }
 
+// ── Collapsible section ───────────────────────────────────────────────────────
 function Section({ title, subtitle, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="border-b border-gray-100 last:border-none">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex justify-between items-center py-4 px-1 text-left"
-      >
+    <div style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: open ? 0 : 0 }}>
+      <button type="button" onClick={() => setOpen(!open)} style={{
+        width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "14px 0", background: "none", border: "none", cursor: "pointer", textAlign: "left",
+      }}>
         <div>
-          <p className="font-medium text-gray-800 text-sm">{title}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
+          <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.75)", marginBottom: 2 }}>{title}</p>
+          <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "rgba(255,255,255,0.28)" }}>{subtitle}</p>
         </div>
-        {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+        {open ? <ChevronUp size={14} color="rgba(255,255,255,0.3)" /> : <ChevronDown size={14} color="rgba(255,255,255,0.3)" />}
       </button>
-      {open && <div className="pb-5 px-1 space-y-4">{children}</div>}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }} style={{ overflow: "hidden", paddingBottom: 16 }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
+// ── Checkbox item ─────────────────────────────────────────────────────────────
+function CheckItem({ label, checked, onChange }) {
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+      <input type="checkbox" checked={checked} onChange={onChange} style={{ accentColor: "#6E5C86", width: 14, height: 14 }} />
+      <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>{label}</span>
+    </label>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 function AIModes() {
   const { id } = useParams()
-
-  const [catalog, setCatalog] = useState({
-    concepts: [],
-    forbiddenTopics: [],
-    misconceptions: [],
-    responseTypes: [],
-    showSolutionPolicies: [],
-  })
+  const [catalog, setCatalog] = useState({ concepts: [], forbiddenTopics: [], misconceptions: [], responseTypes: [], showSolutionPolicies: [] })
   const [courseConcepts, setCourseConcepts] = useState([])
   const [catalogLoading, setCatalogLoading] = useState(true)
-
   const [customModes, setCustomModes] = useState([])
   const [loadingModes, setLoadingModes] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -71,12 +89,10 @@ function AIModes() {
 
   const [modeName, setModeName] = useState("")
   const [modeDescription, setModeDescription] = useState("")
-
   const [selectedConceptIds, setSelectedConceptIds] = useState(() => new Set())
   const [selectedForbiddenIds, setSelectedForbiddenIds] = useState(() => new Set())
   const [selectedMisconceptionIds, setSelectedMisconceptionIds] = useState(() => new Set())
   const [selectedResponseTypeIds, setSelectedResponseTypeIds] = useState(() => new Set())
-
   const [enableAdaptiveHints, setEnableAdaptiveHints] = useState(false)
   const [hintLimit, setHintLimit] = useState(3)
   const [cooldownSeconds, setCooldownSeconds] = useState(30)
@@ -84,7 +100,7 @@ function AIModes() {
   const [enableRag, setEnableRag] = useState(false)
   const [showSolutionPolicy, setShowSolutionPolicy] = useState("after_submission")
 
-  const loadCatalogAndCourseConcepts = useCallback(async () => {
+  const loadCatalog = useCallback(async () => {
     setCatalogLoading(true)
     try {
       const token = localStorage.getItem("token")
@@ -94,419 +110,247 @@ function AIModes() {
       ])
       if (catRes.ok) {
         const d = await catRes.json()
-        setCatalog({
-          concepts: d.concepts || [],
-          forbiddenTopics: d.forbiddenTopics || [],
-          misconceptions: d.misconceptions || [],
-          responseTypes: d.responseTypes || [],
-          showSolutionPolicies: d.showSolutionPolicies || POLICY_OPTIONS.map((p) => p.value),
-        })
+        setCatalog({ concepts: d.concepts||[], forbiddenTopics: d.forbiddenTopics||[], misconceptions: d.misconceptions||[], responseTypes: d.responseTypes||[], showSolutionPolicies: d.showSolutionPolicies||[] })
       }
-      if (ccRes.ok) {
-        const d = await ccRes.json()
-        setCourseConcepts(d.concepts || [])
-      }
-    } catch {
-      setSaveError("Could not load AI catalog.")
-    } finally {
-      setCatalogLoading(false)
-    }
+      if (ccRes.ok) { const d = await ccRes.json(); setCourseConcepts(d.concepts || []) }
+    } catch { setSaveError("Could not load AI catalog.") }
+    finally { setCatalogLoading(false) }
   }, [id])
 
-  useEffect(() => {
-    loadCatalogAndCourseConcepts()
-  }, [loadCatalogAndCourseConcepts])
+  useEffect(() => { loadCatalog() }, [loadCatalog])
 
   const fetchCustomModes = async () => {
     setLoadingModes(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/exercises/types/course/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!response.ok) return
-      const data = await response.json()
-      setCustomModes((data.types || []).filter((t) => !t.isSystemPresent))
-    } catch {
-      /* ignore */
-    } finally {
-      setLoadingModes(false)
-    }
+      const res = await fetch(`${API_BASE_URL}/exercises/types/course/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) return
+      const data = await res.json()
+      setCustomModes((data.types || []).filter(t => !t.isSystemPresent))
+    } catch {}
+    finally { setLoadingModes(false) }
   }
 
-  useEffect(() => {
-    fetchCustomModes()
-  }, [id])
+  useEffect(() => { fetchCustomModes() }, [id])
 
   const deleteMode = async (typeId) => {
-    if (!window.confirm("Are you sure you want to delete this mode?")) return
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/exercises/types/${typeId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!response.ok) {
-        const err = await response.json()
-        alert(err.detail || "Failed to delete mode")
-        return
-      }
+      const res = await fetch(`${API_BASE_URL}/exercises/types/${typeId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) { const err = await res.json(); alert(err.detail || "Failed to delete mode"); return }
       fetchCustomModes()
-    } catch {
-      alert("Something went wrong. Please try again.")
-    }
+    } catch { alert("Something went wrong.") }
   }
 
-  const toggleId = (setFn, id) => {
-    setFn((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  const toggleId = (setFn, id) => setFn(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   const resetForm = () => {
-    setModeName("")
-    setModeDescription("")
-    setSelectedConceptIds(new Set())
-    setSelectedForbiddenIds(new Set())
-    setSelectedMisconceptionIds(new Set())
-    setSelectedResponseTypeIds(new Set())
-    setEnableAdaptiveHints(false)
-    setHintLimit(3)
-    setCooldownSeconds(30)
-    setEnableErrorExplanation(true)
-    setEnableRag(false)
-    setShowSolutionPolicy("after_submission")
+    setModeName(""); setModeDescription("")
+    setSelectedConceptIds(new Set()); setSelectedForbiddenIds(new Set())
+    setSelectedMisconceptionIds(new Set()); setSelectedResponseTypeIds(new Set())
+    setEnableAdaptiveHints(false); setHintLimit(3); setCooldownSeconds(30)
+    setEnableErrorExplanation(true); setEnableRag(false); setShowSolutionPolicy("after_submission")
   }
 
   const handleCreate = async () => {
-    if (!modeName.trim()) {
-      setSaveError("Mode name is required")
-      return
-    }
-    if (enableAdaptiveHints) {
-      const lim = parseInt(String(hintLimit), 10)
-      if (!Number.isFinite(lim) || lim < 1) {
-        setSaveError("Hint limit must be at least 1 when adaptive hints are enabled")
-        return
-      }
-    }
-    setSaveError("")
-    setSaving(true)
+    if (!modeName.trim()) { setSaveError("Mode name is required"); return }
+    if (enableAdaptiveHints) { const l = parseInt(String(hintLimit), 10); if (!Number.isFinite(l) || l < 1) { setSaveError("Hint limit must be at least 1"); return } }
+    setSaveError(""); setSaving(true)
     try {
       const token = localStorage.getItem("token")
-      const body = {
-        name: modeName.trim(),
-        description: modeDescription.trim() || null,
-        category: id,
-        conceptIds: Array.from(selectedConceptIds),
-        forbiddenTopicIds: Array.from(selectedForbiddenIds),
-        misconceptionIds: Array.from(selectedMisconceptionIds),
-        responseTypeIds: Array.from(selectedResponseTypeIds),
-        enableAdaptiveHints,
-        hintLimit: enableAdaptiveHints ? parseInt(String(hintLimit), 10) : null,
-        cooldownSeconds: Math.max(0, parseInt(String(cooldownSeconds), 10) || 0),
-        enableErrorExplanation,
-        enableRag,
-        showSolutionPolicy,
-        defaultHintLimit: enableAdaptiveHints ? parseInt(String(hintLimit), 10) : 999,
-        defaultCooldownStrategy: Math.max(0, parseInt(String(cooldownSeconds), 10) || 0),
-        strictLevel: 1,
-        guidanceStyle: "structured",
-        anticipatedMisconceptions: null,
-      }
-      const response = await fetch(`${API_BASE_URL}/exercises/types/create`, {
+      const res = await fetch(`${API_BASE_URL}/exercises/types/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ name: modeName.trim(), description: modeDescription.trim() || null, category: id, conceptIds: Array.from(selectedConceptIds), forbiddenTopicIds: Array.from(selectedForbiddenIds), misconceptionIds: Array.from(selectedMisconceptionIds), responseTypeIds: Array.from(selectedResponseTypeIds), enableAdaptiveHints, hintLimit: enableAdaptiveHints ? parseInt(String(hintLimit),10) : null, cooldownSeconds: Math.max(0, parseInt(String(cooldownSeconds),10)||0), enableErrorExplanation, enableRag, showSolutionPolicy, defaultHintLimit: enableAdaptiveHints ? parseInt(String(hintLimit),10) : 999, defaultCooldownStrategy: Math.max(0, parseInt(String(cooldownSeconds),10)||0), strictLevel: 1, guidanceStyle: "structured", anticipatedMisconceptions: null }),
       })
-      if (!response.ok) {
-        const err = await response.json()
-        setSaveError(err.detail || "Failed to create mode")
-        return
-      }
-      resetForm()
-      setShowForm(false)
-      fetchCustomModes()
-    } catch {
-      setSaveError("Something went wrong. Please try again.")
-    } finally {
-      setSaving(false)
-    }
+      if (!res.ok) { const err = await res.json(); setSaveError(err.detail || "Failed to create mode"); return }
+      resetForm(); setShowForm(false); fetchCustomModes()
+    } catch { setSaveError("Something went wrong.") }
+    finally { setSaving(false) }
   }
 
-  const formatCooldown = (mode) => {
-    const sec = mode.cooldownSeconds != null ? mode.cooldownSeconds : null
-    if (sec != null) return sec === 0 ? "None" : `${sec}s`
-    const s = mode.defaultCooldownStrategy
-    if (s === 0) return "None"
-    if (s === 1) return "≤30s (legacy)"
-    return ">30s (legacy)"
-  }
+  const formatCooldown = m => { const s = m.cooldownSeconds != null ? m.cooldownSeconds : null; if (s != null) return s === 0 ? "None" : `${s}s`; return m.defaultCooldownStrategy === 0 ? "None" : `${m.defaultCooldownStrategy} (legacy)` }
+  const formatHintLimit = m => { if (m.enableAdaptiveHints && m.hintLimit != null) return m.hintLimit; if (!m.enableAdaptiveHints && m.defaultHintLimit >= 999) return "Unlimited"; return m.defaultHintLimit }
 
-  const formatHintLimit = (mode) => {
-    if (mode.enableAdaptiveHints && mode.hintLimit != null) return mode.hintLimit
-    if (!mode.enableAdaptiveHints && mode.defaultHintLimit >= 999) return "Unlimited (legacy)"
-    return mode.defaultHintLimit
-  }
+  const cardStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "20px 22px" }
+  const inputStyle = { width: "100%", padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", fontFamily: "'DM Sans',sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" }
+  const tagStyle = (color) => ({ fontSize: 10, padding: "2px 8px", borderRadius: 99, fontWeight: 500 })
 
   return (
-    <div className="min-h-screen bg-[#F4F1F7] p-10">
-      <h1 className="text-2xl font-semibold text-[#3e2764] mb-8">AI Learning Modes</h1>
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
+        .ai-input::placeholder { color:rgba(255,255,255,0.2); }
+        .ai-input:focus { border-color:rgba(178,152,218,0.5)!important; box-shadow:0 0 0 3px rgba(142,125,165,0.12); }
+        option { background:#1e0f38; color:rgba(255,255,255,0.8); }
+      `}</style>
 
-      <h2 className="text-base font-semibold text-gray-600 mb-3">Default Modes</h2>
-      <div className="grid grid-cols-2 gap-4 mb-10">
-        {DEFAULT_MODES.map((mode) => (
-          <div key={mode.name} className="bg-white rounded-xl shadow p-5">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-semibold text-[#3e2764]">{mode.name}</h3>
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">System</span>
+      <h1 style={{ fontSize: 20, fontWeight: 600, color: "rgba(255,255,255,0.88)", marginBottom: 6 }}>AI Learning Modes</h1>
+      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 28 }}>Configure how the AI assists students in each exercise type</p>
+
+      {/* Default modes */}
+      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>System Modes</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 32 }}>
+        {DEFAULT_MODES.map((mode, i) => (
+          <motion.div key={mode.name} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} style={cardStyle}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+              <h3 style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 600, fontSize: 14, color: "rgba(255,255,255,0.85)" }}>{mode.name}</h3>
+              <span style={{ ...tagStyle(), background: "rgba(142,125,165,0.15)", border: "1px solid rgba(142,125,165,0.2)", color: "rgba(178,152,218,0.7)" }}>System</span>
             </div>
-            <p className="text-sm text-gray-500 mb-3">{mode.description}</p>
-            <div className="flex gap-4 text-xs text-gray-400">
-              <span>Hint limit: {mode.hintLimit === 0 ? "None" : mode.hintLimit}</span>
-              <span>Cooldown: {mode.cooldown === 0 ? "None" : `${mode.cooldown}s`}</span>
-              <span>Strict level: {mode.strictLevel}/4</span>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6, marginBottom: 12 }}>{mode.description}</p>
+            <div style={{ display: "flex", gap: 12 }}>
+              {[`Hints: ${mode.hintLimit === 0 ? "None" : mode.hintLimit}`, `Cooldown: ${mode.cooldown === 0 ? "None" : `${mode.cooldown}s`}`, `Level: ${mode.strictLevel}/4`].map(t => (
+                <span key={t} style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>{t}</span>
+              ))}
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-base font-semibold text-gray-600">Custom Modes</h2>
+      {/* Custom modes */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: "0.12em", textTransform: "uppercase" }}>Custom Modes</p>
         <button
-          type="button"
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-[#8E7DA5] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#7B6A96] transition"
+          onClick={() => { setShowForm(!showForm); if (showForm) resetForm() }}
+          style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 9, background: showForm ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg,#8E7DA5,#6E5C86)", border: showForm ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(178,152,218,0.25)", color: showForm ? "rgba(255,255,255,0.5)" : "white", fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
         >
-          <Plus size={15} />
-          {showForm ? "Cancel" : "Create Custom Mode"}
+          {showForm ? <><X size={13} /> Cancel</> : <><Plus size={13} /> Create Custom Mode</>}
         </button>
       </div>
 
       {loadingModes ? (
-        <div className="flex items-center gap-2 text-gray-400 text-sm mb-6">
-          <Loader2 size={16} className="animate-spin" /> Loading modes...
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.3)", fontSize: 13, padding: "20px 0" }}>
+          <Loader2 size={14} className="animate-spin" style={{ color: "#8E7DA5" }} /> Loading modes...
         </div>
       ) : customModes.length === 0 && !showForm ? (
-        <div className="bg-white rounded-xl shadow p-8 text-center text-gray-400 mb-6">
-          <p className="text-sm">No custom modes yet. Click &quot;Create Custom Mode&quot; to add one.</p>
+        <div style={{ ...cardStyle, textAlign: "center", padding: "32px" }}>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>No custom modes yet. Create one to get started.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {customModes.map((mode) => (
-            <div key={mode.typeId} className="bg-white rounded-xl shadow p-5">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-[#3e2764]">{mode.name}</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Custom</span>
-                  <button
-                    type="button"
-                    onClick={() => deleteMode(mode.typeId)}
-                    className="text-red-400 hover:text-red-600 transition"
-                    title="Delete mode"
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: showForm ? 24 : 0 }}>
+          {customModes.map((mode, i) => (
+            <motion.div key={mode.typeId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} style={cardStyle}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <h3 style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 600, fontSize: 14, color: "rgba(255,255,255,0.85)" }}>{mode.name}</h3>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, fontWeight: 500, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.2)", color: "#4ade80" }}>Custom</span>
+                  <button onClick={() => deleteMode(mode.typeId)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.2)", padding: 4, borderRadius: 6, transition: "all 0.2s" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "#f87171"; e.currentTarget.style.background = "rgba(239,68,68,0.1)" }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.2)"; e.currentTarget.style.background = "transparent" }}
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
-              {mode.description && <p className="text-sm text-gray-500 mb-3">{mode.description}</p>}
-              <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                <span>Adaptive hints: {mode.enableAdaptiveHints ? "On" : "Off"}</span>
-                <span>Hint cap: {formatHintLimit(mode)}</span>
-                <span>Cooldown: {formatCooldown(mode)}</span>
-                <span>RAG: {mode.enableRag ? "On" : "Off"}</span>
-                <span>Errors: {mode.enableErrorExplanation ? "On" : "Off"}</span>
+              {mode.description && <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6, marginBottom: 10 }}>{mode.description}</p>}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {[`Adaptive: ${mode.enableAdaptiveHints ? "On" : "Off"}`, `Hints: ${formatHintLimit(mode)}`, `Cooldown: ${formatCooldown(mode)}`, `RAG: ${mode.enableRag ? "On" : "Off"}`].map(t => (
+                  <span key={t} style={{ fontSize: 10, color: "rgba(255,255,255,0.28)" }}>{t}</span>
+                ))}
               </div>
-              <p className="text-xs text-gray-400 mt-2 font-mono">Policy: {mode.showSolutionPolicy || "—"}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow p-6 space-y-2">
-          <h2 className="font-semibold text-[#3e2764] text-lg mb-4">Configure Custom Mode</h2>
+      {/* Create form */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, y: 16, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} exit={{ opacity: 0, y: 10, height: 0 }}
+            transition={{ duration: 0.3 }} style={{ overflow: "hidden" }}
+          >
+            <div style={{ ...cardStyle, border: "1px solid rgba(178,152,218,0.2)" }}>
+              <h2 style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 600, fontSize: 15, color: "rgba(255,255,255,0.88)", marginBottom: 20 }}>Configure Custom Mode</h2>
 
-          {catalogLoading && (
-            <p className="text-sm text-gray-400 flex items-center gap-2 mb-2">
-              <Loader2 size={14} className="animate-spin" /> Loading options…
-            </p>
-          )}
-
-          <div className="space-y-3 pb-4 border-b border-gray-100">
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Mode Name</label>
-              <input
-                value={modeName}
-                onChange={(e) => setModeName(e.target.value)}
-                className="w-full border p-3 rounded-lg text-sm"
-                placeholder="e.g. Exam Mode"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">
-                Description <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <textarea
-                value={modeDescription}
-                onChange={(e) => setModeDescription(e.target.value)}
-                className="w-full border p-3 rounded-lg text-sm"
-                rows={2}
-                placeholder="Describe when to use this mode..."
-              />
-            </div>
-          </div>
-
-          <Section title="Concepts (from this course)" subtitle="Only concepts you assigned to the course appear here" defaultOpen>
-            {courseConcepts.length === 0 ? (
-              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-3">
-                No concepts linked to this course yet. Edit the course or recreate it with concept selections.
-              </p>
-            ) : (
-              <div className="grid sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                {courseConcepts.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2 text-sm text-gray-600">
-                    <input
-                      type="checkbox"
-                      checked={selectedConceptIds.has(c.id)}
-                      onChange={() => toggleId(setSelectedConceptIds, c.id)}
-                      className="rounded accent-[#6E5C86]"
-                    />
-                    <span className="font-mono text-xs">{c.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </Section>
-
-          <Section title="Forbidden topics" subtitle="AI should avoid steering students toward these">
-            <div className="grid sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-              {catalog.forbiddenTopics.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={selectedForbiddenIds.has(c.id)}
-                    onChange={() => toggleId(setSelectedForbiddenIds, c.id)}
-                    className="rounded accent-[#6E5C86]"
-                  />
-                  <span className="font-mono text-xs">{c.name}</span>
-                </label>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Misconceptions" subtitle="Common mistakes the AI can watch for">
-            <div className="grid sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto">
-              {catalog.misconceptions.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={selectedMisconceptionIds.has(c.id)}
-                    onChange={() => toggleId(setSelectedMisconceptionIds, c.id)}
-                    className="rounded accent-[#6E5C86]"
-                  />
-                  <span className="font-mono text-xs">{c.name}</span>
-                </label>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Response types" subtitle="Styles the AI may use when helping">
-            <div className="grid sm:grid-cols-2 gap-2">
-              {catalog.responseTypes.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={selectedResponseTypeIds.has(c.id)}
-                    onChange={() => toggleId(setSelectedResponseTypeIds, c.id)}
-                    className="rounded accent-[#6E5C86]"
-                  />
-                  <span className="font-mono text-xs">{c.name}</span>
-                </label>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Behavior" subtitle="Adaptive hints, cooldown, and solution policy" defaultOpen>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Adaptive hints</p>
-                <p className="text-xs text-gray-400">Requires a per-exercise hint cap (Get Hint button only)</p>
-              </div>
-              <Toggle checked={enableAdaptiveHints} onChange={setEnableAdaptiveHints} />
-            </div>
-            {enableAdaptiveHints && (
-              <div className="pl-1">
-                <label className="text-sm text-gray-600 block mb-1">Hint limit (Get Hint)</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={hintLimit}
-                  onChange={(e) => setHintLimit(Number(e.target.value))}
-                  className="border p-2 rounded w-28 text-sm"
-                />
-              </div>
-            )}
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">
-                Cooldown between AI responses (seconds)
-              </label>
-              <p className="text-xs text-gray-400 mb-2">Applies to chat and hints — reduces spam</p>
-              <input
-                type="number"
-                min={0}
-                value={cooldownSeconds}
-                onChange={(e) => setCooldownSeconds(Number(e.target.value))}
-                className="border p-2 rounded w-28 text-sm"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <p className="text-sm font-medium text-gray-700">Enable RAG / course materials</p>
-              <Toggle checked={enableRag} onChange={setEnableRag} />
-            </div>
-            <div className="flex justify-between items-center">
-              <p className="text-sm font-medium text-gray-700">Explain execution errors</p>
-              <Toggle checked={enableErrorExplanation} onChange={setEnableErrorExplanation} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Show solution policy</p>
-              <select
-                value={showSolutionPolicy}
-                onChange={(e) => setShowSolutionPolicy(e.target.value)}
-                className="border p-2 rounded-lg text-sm w-full max-w-md"
-              >
-                {POLICY_OPTIONS.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </Section>
-
-          {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
-
-          <div className="pt-4">
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={saving}
-              className="w-full bg-[#8E7DA5] text-white py-3 rounded-lg hover:bg-[#7B6A96] disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
-            >
-              {saving ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" /> Creating...
-                </>
-              ) : (
-                "Create Mode"
+              {catalogLoading && (
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+                  <Loader2 size={13} className="animate-spin" /> Loading options…
+                </p>
               )}
-            </button>
-          </div>
-        </div>
-      )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 16, marginBottom: 4, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <input className="ai-input" placeholder="Mode name (e.g. Exam Mode)" value={modeName} onChange={e => setModeName(e.target.value)} style={inputStyle} />
+                <textarea className="ai-input" placeholder="Description (optional)..." value={modeDescription} onChange={e => setModeDescription(e.target.value)} rows={2} style={{ ...inputStyle, resize: "none" }} />
+              </div>
+
+              <Section title="Concepts (from this course)" subtitle="Only concepts assigned to this course appear here" defaultOpen>
+                {courseConcepts.length === 0 ? (
+                  <p style={{ fontSize: 12, color: "rgba(251,191,36,0.6)", background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.12)", borderRadius: 8, padding: "10px 12px" }}>No concepts linked to this course yet.</p>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxHeight: 160, overflowY: "auto" }}>
+                    {courseConcepts.map(c => <CheckItem key={c.id} label={c.name} checked={selectedConceptIds.has(c.id)} onChange={() => toggleId(setSelectedConceptIds, c.id)} />)}
+                  </div>
+                )}
+              </Section>
+
+              <Section title="Forbidden topics" subtitle="AI should avoid steering students toward these">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxHeight: 160, overflowY: "auto" }}>
+                  {catalog.forbiddenTopics.map(c => <CheckItem key={c.id} label={c.name} checked={selectedForbiddenIds.has(c.id)} onChange={() => toggleId(setSelectedForbiddenIds, c.id)} />)}
+                </div>
+              </Section>
+
+              <Section title="Misconceptions" subtitle="Common mistakes the AI can watch for">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxHeight: 160, overflowY: "auto" }}>
+                  {catalog.misconceptions.map(c => <CheckItem key={c.id} label={c.name} checked={selectedMisconceptionIds.has(c.id)} onChange={() => toggleId(setSelectedMisconceptionIds, c.id)} />)}
+                </div>
+              </Section>
+
+              <Section title="Response types" subtitle="Styles the AI may use when helping">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {catalog.responseTypes.map(c => <CheckItem key={c.id} label={c.name} checked={selectedResponseTypeIds.has(c.id)} onChange={() => toggleId(setSelectedResponseTypeIds, c.id)} />)}
+                </div>
+              </Section>
+
+              <Section title="Behavior" subtitle="Adaptive hints, cooldown, and solution policy" defaultOpen>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 2 }}>Adaptive hints</p>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)" }}>Requires a per-exercise hint cap</p>
+                  </div>
+                  <Toggle checked={enableAdaptiveHints} onChange={setEnableAdaptiveHints} />
+                </div>
+                {enableAdaptiveHints && (
+                  <div>
+                    <label style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Hint limit</label>
+                    <input className="ai-input" type="number" min={1} value={hintLimit} onChange={e => setHintLimit(Number(e.target.value))} style={{ ...inputStyle, width: 100 }} />
+                  </div>
+                )}
+                <div>
+                  <label style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4 }}>Cooldown between AI responses (seconds)</label>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", marginBottom: 6 }}>Applies to chat and hints</p>
+                  <input className="ai-input" type="number" min={0} value={cooldownSeconds} onChange={e => setCooldownSeconds(Number(e.target.value))} style={{ ...inputStyle, width: 100 }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)" }}>Enable RAG / course materials</p>
+                  <Toggle checked={enableRag} onChange={setEnableRag} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)" }}>Explain execution errors</p>
+                  <Toggle checked={enableErrorExplanation} onChange={setEnableErrorExplanation} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Show solution policy</label>
+                  <select className="ai-input" value={showSolutionPolicy} onChange={e => setShowSolutionPolicy(e.target.value)} style={{ ...inputStyle, maxWidth: 300 }}>
+                    {POLICY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                </div>
+              </Section>
+
+              {saveError && <p style={{ fontSize: 12, color: "#f87171", padding: "8px 0" }}>{saveError}</p>}
+
+              <button
+                onClick={handleCreate} disabled={saving}
+                style={{ width: "100%", padding: "12px", marginTop: 16, borderRadius: 10, background: "linear-gradient(135deg,#8E7DA5,#6E5C86)", border: "1px solid rgba(178,152,218,0.25)", color: "white", fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s" }}
+                onMouseEnter={e => !saving && (e.currentTarget.style.boxShadow = "0 6px 20px rgba(110,92,134,0.4)")}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}
+              >
+                {saving ? <><Loader2 size={14} className="animate-spin" /> Creating...</> : "Create Mode"}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

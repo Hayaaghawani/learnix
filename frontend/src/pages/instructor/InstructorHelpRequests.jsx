@@ -1,415 +1,247 @@
 import { useState, useEffect, useCallback } from "react"
 import { Loader2, LifeBuoy, ChevronDown, ChevronUp, CheckCheck, Clock, User, BookOpen, Send, CheckCircle } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "http://localhost:8000"
 
 function InstructorHelpRequests() {
-  const [requests, setRequests] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [expandedId, setExpandedId] = useState(null)
-  const [detailCache, setDetailCache] = useState({})
+  const [requests, setRequests]         = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState("")
+  const [expandedId, setExpandedId]     = useState(null)
+  const [detailCache, setDetailCache]   = useState({})
   const [detailLoading, setDetailLoading] = useState(false)
-  const [resolvingId, setResolvingId] = useState(null)
+  const [resolvingId, setResolvingId]   = useState(null)
   const [filterStatus, setFilterStatus] = useState("pending")
-
-  // Reply state per request
-  const [replyText, setReplyText] = useState({})
+  const [replyText, setReplyText]       = useState({})
   const [replySending, setReplySending] = useState(null)
   const [replySuccess, setReplySuccess] = useState({})
-  const [replyError, setReplyError] = useState({})
+  const [replyError, setReplyError]     = useState({})
 
   const token = localStorage.getItem("token")
 
   const loadRequests = useCallback(async () => {
-    setLoading(true)
-    setError("")
+    setLoading(true); setError("")
     try {
-      const res = await fetch(`${API_BASE_URL}/help-requests?status=${filterStatus}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(`${API_BASE_URL}/help-requests?status=${filterStatus}`, { headers: { Authorization: `Bearer ${token}` } })
       if (!res.ok) throw new Error("Failed to fetch help requests.")
-      const data = await res.json()
-      setRequests(data.requests || [])
-    } catch (e) {
-      setError(e.message || "Something went wrong.")
-    } finally {
-      setLoading(false)
-    }
+      const data = await res.json(); setRequests(data.requests || [])
+    } catch (e) { setError(e.message || "Something went wrong.") }
+    finally { setLoading(false) }
   }, [token, filterStatus])
 
-  useEffect(() => {
-    loadRequests()
-  }, [loadRequests])
+  useEffect(() => { loadRequests() }, [loadRequests])
 
   const loadDetail = async (requestId) => {
     if (detailCache[requestId]) return
     setDetailLoading(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/help-requests/${requestId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(`${API_BASE_URL}/help-requests/${requestId}`, { headers: { Authorization: `Bearer ${token}` } })
       if (!res.ok) throw new Error("Could not load details.")
-      const data = await res.json()
-      setDetailCache((prev) => ({ ...prev, [requestId]: data }))
-    } catch {
-      setDetailCache((prev) => ({ ...prev, [requestId]: { error: "Failed to load details." } }))
-    } finally {
-      setDetailLoading(false)
-    }
+      setDetailCache((prev) => ({ ...prev, [requestId]: await res.json() }))
+    } catch { setDetailCache((prev) => ({ ...prev, [requestId]: { error: "Failed to load details." } })) }
+    finally { setDetailLoading(false) }
   }
 
   const toggleExpand = async (requestId) => {
-    if (expandedId === requestId) {
-      setExpandedId(null)
-      return
-    }
-    setExpandedId(requestId)
-    await loadDetail(requestId)
+    if (expandedId === requestId) { setExpandedId(null); return }
+    setExpandedId(requestId); await loadDetail(requestId)
   }
 
   const handleResolve = async (requestId) => {
     setResolvingId(requestId)
     try {
-      const res = await fetch(`${API_BASE_URL}/help-requests/${requestId}/resolve`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(`${API_BASE_URL}/help-requests/${requestId}/resolve`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` } })
       if (!res.ok) throw new Error()
-      setRequests((prev) =>
-        prev.map((r) => (r.id === requestId ? { ...r, status: "resolved" } : r))
-      )
+      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "resolved" } : r)))
       if (expandedId === requestId) setExpandedId(null)
-    } catch {
-      // silently fail
-    } finally {
-      setResolvingId(null)
-    }
+    } catch {} finally { setResolvingId(null) }
   }
 
   const handleSendReply = async (requestId) => {
-    const text = (replyText[requestId] || "").trim()
-    if (!text || replySending === requestId) return
-
-    setReplySending(requestId)
-    setReplyError((prev) => ({ ...prev, [requestId]: "" }))
-
+    const text = (replyText[requestId] || "").trim(); if (!text || replySending === requestId) return
+    setReplySending(requestId); setReplyError((prev) => ({ ...prev, [requestId]: "" }))
     try {
-      const res = await fetch(`${API_BASE_URL}/help-requests/${requestId}/reply`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ reply: text }),
-      })
+      const res = await fetch(`${API_BASE_URL}/help-requests/${requestId}/reply`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ reply: text }) })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setReplyError((prev) => ({
-          ...prev,
-          [requestId]: data.detail || "Could not send reply.",
-        }))
-        return
-      }
-      // Mark success and update local state
-      setReplySuccess((prev) => ({ ...prev, [requestId]: true }))
-      setReplyText((prev) => ({ ...prev, [requestId]: "" }))
-      // Update the request status to resolved in list
-      setRequests((prev) =>
-        prev.map((r) => (r.id === requestId ? { ...r, status: "resolved", reply: text } : r))
-      )
-      // Update detail cache with the reply
-      setDetailCache((prev) => ({
-        ...prev,
-        [requestId]: { ...prev[requestId], reply: text },
-      }))
-    } catch {
-      setReplyError((prev) => ({ ...prev, [requestId]: "Network error. Try again." }))
-    } finally {
-      setReplySending(null)
-    }
+      if (!res.ok) { setReplyError((prev) => ({ ...prev, [requestId]: data.detail || "Could not send reply." })); return }
+      setReplySuccess((prev) => ({ ...prev, [requestId]: true })); setReplyText((prev) => ({ ...prev, [requestId]: "" }))
+      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "resolved", reply: text } : r)))
+      setDetailCache((prev) => ({ ...prev, [requestId]: { ...prev[requestId], reply: text } }))
+    } catch { setReplyError((prev) => ({ ...prev, [requestId]: "Network error. Try again." })) }
+    finally { setReplySending(null) }
   }
 
   const pendingCount = requests.filter((r) => r.status === "pending").length
-  const detail = expandedId ? detailCache[expandedId] : null
+  const S = {
+    page: { minHeight: "100vh", background: "#120b22", fontFamily: "'DM Sans', sans-serif" },
+    card: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, overflow: "hidden", marginBottom: 8 },
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={S.page}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap'); .hr-input::placeholder{color:rgba(255,255,255,0.2);} .hr-input:focus{border-color:rgba(178,152,218,0.5)!important;box-shadow:0 0 0 3px rgba(142,125,165,0.12);}`}</style>
 
-      {/* Page header */}
-      <div className="bg-white border-b px-8 py-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#6E5C86]/10 rounded-xl flex items-center justify-center">
-            <LifeBuoy size={20} className="text-[#6E5C86]" />
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "18px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(142,125,165,0.15)", border: "1px solid rgba(142,125,165,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <LifeBuoy size={18} color="#b298da" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">Student Help Requests</h1>
-            <p className="text-xs text-gray-500">
-              {pendingCount > 0
-                ? `${pendingCount} pending request${pendingCount !== 1 ? "s" : ""} need your attention`
-                : "All caught up!"}
+            <h1 style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.88)", marginBottom: 2 }}>Student Help Requests</h1>
+            <p style={{ fontSize: 11, color: pendingCount > 0 ? "rgba(251,191,36,0.7)" : "rgba(34,197,94,0.6)" }}>
+              {pendingCount > 0 ? `${pendingCount} pending request${pendingCount !== 1 ? "s" : ""} need your attention` : "All caught up!"}
             </p>
           </div>
         </div>
-
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-sm">
-          {[
-            { value: "pending", label: "Pending" },
-            { value: "resolved", label: "Resolved" },
-            { value: "all", label: "All" },
-          ].map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setFilterStatus(tab.value)}
-              className={`px-4 py-1.5 rounded-md font-medium transition-colors ${
-                filterStatus === tab.value
-                  ? "bg-white text-[#6E5C86] shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
+        {/* Filter tabs */}
+        <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 4 }}>
+          {[{ value: "pending", label: "Pending" }, { value: "resolved", label: "Resolved" }, { value: "all", label: "All" }].map((tab) => (
+            <button key={tab.value} type="button" onClick={() => setFilterStatus(tab.value)} style={{ padding: "6px 16px", borderRadius: 7, fontSize: 12, fontFamily: "'DM Sans',sans-serif", fontWeight: 500, cursor: "pointer", background: filterStatus === tab.value ? "rgba(142,125,165,0.2)" : "transparent", border: filterStatus === tab.value ? "1px solid rgba(178,152,218,0.25)" : "1px solid transparent", color: filterStatus === tab.value ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)", transition: "all 0.2s" }}>
               {tab.label}
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      <div className="max-w-4xl mx-auto px-6 py-6">
-
-        {loading && (
-          <div className="flex justify-center py-16">
-            <Loader2 size={28} className="animate-spin text-[#6E5C86]" />
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-4 text-sm">
-            {error}
-          </div>
-        )}
-
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 32px" }}>
+        {loading && <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}><Loader2 size={24} className="animate-spin" style={{ color: "#8E7DA5" }} /></div>}
+        {error && <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "12px 16px", color: "#f87171", fontSize: 13 }}>{error}</div>}
         {!loading && !error && requests.length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <LifeBuoy size={36} className="mx-auto mb-3 opacity-40" />
-            <p className="text-sm">No {filterStatus !== "all" ? filterStatus : ""} requests found.</p>
+          <div style={{ textAlign: "center", padding: "60px 0" }}>
+            <LifeBuoy size={32} style={{ color: "rgba(255,255,255,0.1)", margin: "0 auto 12px" }} />
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>No {filterStatus !== "all" ? filterStatus : ""} requests found.</p>
           </div>
         )}
 
-        <div className="space-y-3">
-          {requests.map((req) => {
+        <div>
+          {requests.map((req, i) => {
             const isExpanded = expandedId === req.id
             const d = detailCache[req.id]
             const alreadyReplied = req.reply || replySuccess[req.id]
 
             return (
-              <div
-                key={req.id}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm"
-              >
-                {/* Request row */}
-                <button
-                  type="button"
-                  onClick={() => toggleExpand(req.id)}
-                  className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors"
+              <motion.div key={req.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} style={S.card}>
+                {/* Row */}
+                <button type="button" onClick={() => toggleExpand(req.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "background 0.2s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >
-                  <div
-                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                      req.status === "pending" ? "bg-amber-400" : "bg-green-400"
-                    }`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900 text-sm flex items-center gap-1.5">
-                        <User size={13} className="text-gray-400" />
-                        {req.studentName || "Student"}
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: req.status === "pending" ? "#fbbf24" : "#4ade80", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: 5 }}>
+                        <User size={11} color="rgba(255,255,255,0.3)" />{req.studentName || "Student"}
                       </span>
-                      <span className="text-gray-300">·</span>
-                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <BookOpen size={12} />
-                        {req.exerciseTitle || `Exercise #${req.exerciseId}`}
+                      <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 12 }}>·</span>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", display: "flex", alignItems: "center", gap: 4 }}>
+                        <BookOpen size={11} />{req.exerciseTitle || `Exercise #${req.exerciseId?.slice(0,8)}`}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-0.5 truncate">{req.message}</p>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{req.message}</p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Clock size={11} />
-                      {req.createdAt
-                        ? new Date(req.createdAt).toLocaleString([], {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "—"}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", gap: 4 }}>
+                      <Clock size={10} />{req.createdAt ? new Date(req.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                     </span>
-                    {req.status === "resolved" && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                        Resolved
-                      </span>
-                    )}
-                    {isExpanded ? (
-                      <ChevronUp size={16} className="text-gray-400" />
-                    ) : (
-                      <ChevronDown size={16} className="text-gray-400" />
-                    )}
+                    {req.status === "resolved" && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#4ade80", fontWeight: 500 }}>Resolved</span>}
+                    {isExpanded ? <ChevronUp size={14} color="rgba(255,255,255,0.25)" /> : <ChevronDown size={14} color="rgba(255,255,255,0.25)" />}
                   </div>
                 </button>
 
-                {/* Expanded detail */}
-                {isExpanded && (
-                  <div className="border-t border-gray-100 px-5 py-4 bg-gray-50/60">
+                {/* Expanded */}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} style={{ overflow: "hidden", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div style={{ padding: "20px 18px", background: "rgba(255,255,255,0.02)", display: "flex", flexDirection: "column", gap: 18 }}>
 
-                    {detailLoading && !d && (
-                      <div className="flex justify-center py-6">
-                        <Loader2 size={20} className="animate-spin text-[#6E5C86]" />
-                      </div>
-                    )}
+                        {detailLoading && !d && <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}><Loader2 size={16} className="animate-spin" style={{ color: "#8E7DA5" }} /></div>}
+                        {d?.error && <p style={{ fontSize: 12, color: "#f87171" }}>{d.error}</p>}
 
-                    {d?.error && <p className="text-sm text-red-500">{d.error}</p>}
-
-                    {d && !d.error && (
-                      <div className="space-y-5">
-
-                        {/* Student message */}
-                        <div>
-                          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            Student's Message
-                          </h3>
-                          <p className="text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-4 py-3 whitespace-pre-wrap">
-                            {req.message}
-                          </p>
-                        </div>
-
-                        {/* Code snapshot */}
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                              Code Snapshot
-                            </h3>
-                            {d.language && (
-                              <span className="text-xs bg-[#6E5C86]/10 text-[#6E5C86] px-2 py-0.5 rounded font-medium">
-                                {d.language}
-                              </span>
-                            )}
-                          </div>
-                          <pre className="bg-gray-900 text-green-300 rounded-xl p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-64">
-                            {d.codeSnapshot || "No code snapshot available."}
-                          </pre>
-                        </div>
-
-                        {/* Submissions */}
-                        <div>
-                          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            Submission History
-                          </h3>
-                          {!d.submissions || d.submissions.length === 0 ? (
-                            <p className="text-sm text-gray-400">No submissions yet.</p>
-                          ) : (
-                            <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-semibold uppercase tracking-wider">
-                                    <th className="text-left px-4 py-2.5">Attempt</th>
-                                    <th className="text-left px-4 py-2.5">Status</th>
-                                    <th className="text-left px-4 py-2.5">Score</th>
-                                    <th className="text-left px-4 py-2.5">Passed</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {d.submissions.map((s, i) => (
-                                    <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
-                                      <td className="px-4 py-2.5 text-gray-600 font-mono">#{s.attemptNumber ?? i + 1}</td>
-                                      <td className="px-4 py-2.5">
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                          s.status === "Passed" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-                                        }`}>
-                                          {s.status}
-                                        </span>
-                                      </td>
-                                      <td className="px-4 py-2.5 text-gray-700">{s.score ?? "—"}%</td>
-                                      <td className="px-4 py-2.5 text-gray-500">{s.passedTestCases ?? "—"}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                        {d && !d.error && (
+                          <>
+                            {/* Message */}
+                            <div>
+                              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Student's Message</p>
+                              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{req.message}</p>
                             </div>
-                          )}
-                        </div>
 
-                        {/* ── Reply section ── */}
-                        <div>
-                          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            Reply to Student
-                          </h3>
-
-                          {/* Already replied */}
-                          {(d.reply || replySuccess[req.id]) ? (
-                            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                              <div className="flex items-center gap-2 mb-1.5">
-                                <CheckCircle size={14} className="text-green-600" />
-                                <span className="text-xs font-semibold text-green-700">Reply sent</span>
+                            {/* Code snapshot */}
+                            <div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Code Snapshot</p>
+                                {d.language && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(142,125,165,0.12)", border: "1px solid rgba(142,125,165,0.2)", color: "#b298da", fontWeight: 500 }}>{d.language}</span>}
                               </div>
-                              <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                {d.reply || replyText[req.id]}
-                              </p>
+                              <pre style={{ background: "#0d1117", color: "#4ade80", borderRadius: 10, padding: "12px 14px", fontSize: 11, fontFamily: "monospace", overflowX: "auto", whiteSpace: "pre-wrap", maxHeight: 220 }}>{d.codeSnapshot || "No code snapshot available."}</pre>
                             </div>
-                          ) : (
-                            /* Reply form */
-                            <div className="space-y-2">
-                              <textarea
-                                value={replyText[req.id] || ""}
-                                onChange={(e) =>
-                                  setReplyText((prev) => ({ ...prev, [req.id]: e.target.value }))
-                                }
-                                placeholder="Type your reply to the student..."
-                                rows={4}
-                                className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6E5C86]/40 focus:border-[#6E5C86] transition bg-white"
-                              />
-                              {replyError[req.id] && (
-                                <p className="text-xs text-red-500">{replyError[req.id]}</p>
-                              )}
-                              <div className="flex justify-between items-center">
-                                {req.status === "pending" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleResolve(req.id)}
-                                    disabled={resolvingId === req.id}
-                                    className="flex items-center gap-2 text-gray-500 border border-gray-200 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition disabled:opacity-40"
-                                  >
-                                    {resolvingId === req.id ? (
-                                      <Loader2 size={13} className="animate-spin" />
-                                    ) : (
-                                      <CheckCheck size={13} />
+
+                            {/* Submissions */}
+                            <div>
+                              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Submission History</p>
+                              {!d.submissions || d.submissions.length === 0
+                                ? <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>No submissions yet.</p>
+                                : (
+                                  <div style={{ border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, overflow: "hidden" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                      <thead>
+                                        <tr style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                                          {["Attempt", "Status", "Score", "Passed"].map(h => <th key={h} style={{ textAlign: "left", padding: "8px 12px", fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>{h}</th>)}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {d.submissions.map((s, idx) => (
+                                          <tr key={idx} style={{ borderBottom: idx < d.submissions.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+                                            <td style={{ padding: "8px 12px", fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>#{s.attemptNumber ?? idx + 1}</td>
+                                            <td style={{ padding: "8px 12px" }}>
+                                              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: s.status === "Passed" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${s.status === "Passed" ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, color: s.status === "Passed" ? "#4ade80" : "#f87171", fontWeight: 500 }}>{s.status}</span>
+                                            </td>
+                                            <td style={{ padding: "8px 12px", fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{s.score ?? "—"}%</td>
+                                            <td style={{ padding: "8px 12px", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{s.passedTestCases ?? "—"}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )
+                              }
+                            </div>
+
+                            {/* Reply */}
+                            <div>
+                              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Reply to Student</p>
+                              {(d.reply || replySuccess[req.id]) ? (
+                                <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "12px 14px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                                    <CheckCircle size={13} color="#4ade80" />
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: "#4ade80" }}>Reply sent</span>
+                                  </div>
+                                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", whiteSpace: "pre-wrap" }}>{d.reply || replyText[req.id]}</p>
+                                </div>
+                              ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                  <textarea className="hr-input" value={replyText[req.id] || ""} onChange={(e) => setReplyText((prev) => ({ ...prev, [req.id]: e.target.value }))} placeholder="Type your reply to the student..." rows={4} style={{ width: "100%", padding: "11px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)", fontFamily: "'DM Sans',sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box", resize: "none" }} />
+                                  {replyError[req.id] && <p style={{ fontSize: 11, color: "#f87171" }}>{replyError[req.id]}</p>}
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    {req.status === "pending" && (
+                                      <button type="button" onClick={() => handleResolve(req.id)} disabled={resolvingId === req.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", fontFamily: "'DM Sans',sans-serif", fontSize: 12, cursor: "pointer", opacity: resolvingId === req.id ? 0.5 : 1 }}>
+                                        {resolvingId === req.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCheck size={12} />}Mark Resolved
+                                      </button>
                                     )}
-                                    Mark Resolved (no reply)
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleSendReply(req.id)}
-                                  disabled={
-                                    !replyText[req.id]?.trim() || replySending === req.id
-                                  }
-                                  className="flex items-center gap-2 bg-[#6E5C86] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#5a4a70] transition disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
-                                >
-                                  {replySending === req.id ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                  ) : (
-                                    <Send size={14} />
-                                  )}
-                                  Send Reply
-                                </button>
-                              </div>
+                                    <button type="button" onClick={() => handleSendReply(req.id)} disabled={!replyText[req.id]?.trim() || replySending === req.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 8, background: "linear-gradient(135deg,#8E7DA5,#6E5C86)", border: "1px solid rgba(178,152,218,0.25)", color: "white", fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 500, cursor: (!replyText[req.id]?.trim() || replySending === req.id) ? "not-allowed" : "pointer", opacity: (!replyText[req.id]?.trim() || replySending === req.id) ? 0.4 : 1, marginLeft: "auto" }}>
+                                      {replySending === req.id ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}Send Reply
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-
+                          </>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             )
           })}
         </div>
