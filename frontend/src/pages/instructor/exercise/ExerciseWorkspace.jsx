@@ -1,24 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useParams } from "react-router-dom"
 import Editor from "@monaco-editor/react"
-import { Loader2, LifeBuoy, X, CheckCircle, MessageSquare, Sun, Moon, Terminal } from "lucide-react"
+import { Loader2, LifeBuoy, X, CheckCircle, MessageSquare, Sun, Moon, Terminal, Lock } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "http://localhost:8000"
-const LINT_DEBOUNCE_MS = 1200 // wait 1.2s after typing stops before linting
+const LINT_DEBOUNCE_MS = 1200
 
-// ── Parse C++ compiler errors into Monaco markers ──────────────────────────
 function parseCppErrors(errorText, monacoInstance) {
   const markers = []
   for (const line of errorText.split("\n")) {
-    // g++: code:<line>:<col>: error|warning: <message>
     const match = line.match(/code:(\d+):(\d+):\s*(error|warning|note):\s*(.+)/)
     if (match) {
       markers.push({
         startLineNumber: parseInt(match[1]),
-        startColumn: parseInt(match[2]),
-        endLineNumber: parseInt(match[1]),
-        endColumn: parseInt(match[2]) + 10,
-        message: match[4].trim(),
+        startColumn:     parseInt(match[2]),
+        endLineNumber:   parseInt(match[1]),
+        endColumn:       parseInt(match[2]) + 10,
+        message:         match[4].trim(),
         severity: match[3] === "error"
           ? monacoInstance.MarkerSeverity.Error
           : match[3] === "warning"
@@ -30,21 +28,18 @@ function parseCppErrors(errorText, monacoInstance) {
   return markers
 }
 
-// ── Parse Python errors into Monaco markers ────────────────────────────────
 function parsePythonErrors(errorText, monacoInstance) {
   const markers = []
   const lineMatches = [...errorText.matchAll(/line (\d+)/g)]
-  const errorMatch = errorText.match(
+  const errorMatch  = errorText.match(
     /(SyntaxError|IndentationError|NameError|TypeError|ValueError|AttributeError|ImportError|KeyError|IndexError|ZeroDivisionError):\s*(.+)/
   )
   if (lineMatches.length > 0 && errorMatch) {
     const lineNum = parseInt(lineMatches[lineMatches.length - 1][1])
     markers.push({
-      startLineNumber: lineNum,
-      startColumn: 1,
-      endLineNumber: lineNum,
-      endColumn: 200,
-      message: `${errorMatch[1]}: ${errorMatch[2].trim()}`,
+      startLineNumber: lineNum, startColumn: 1,
+      endLineNumber:   lineNum, endColumn:   200,
+      message:  `${errorMatch[1]}: ${errorMatch[2].trim()}`,
       severity: monacoInstance.MarkerSeverity.Error,
     })
   }
@@ -53,38 +48,39 @@ function parsePythonErrors(errorText, monacoInstance) {
 
 function ExerciseWorkspace() {
   const { id } = useParams()
-  const editorRef = useRef(null)
-  const monacoRef = useRef(null)
+  const editorRef    = useRef(null)
+  const monacoRef    = useRef(null)
   const lintTimerRef = useRef(null)
 
-  const [code, setCode] = useState("")
-  const [output, setOutput] = useState("")
-  const [language, setLanguage] = useState("python")
-  const [stdin, setStdin] = useState("")
-  const [showStdin, setShowStdin] = useState(false)
-  const [darkMode, setDarkMode] = useState(true)
-  const [isLinting, setIsLinting] = useState(false)
-  const [lintClean, setLintClean] = useState(true)
+  const [code,       setCode]       = useState("")
+  const [output,     setOutput]     = useState("")
+  const [language,   setLanguage]   = useState("python")
+  const [languageLock, setLanguageLock] = useState("both") // "python" | "cpp" | "both"
+  const [stdin,      setStdin]      = useState("")
+  const [showStdin,  setShowStdin]  = useState(false)
+  const [darkMode,   setDarkMode]   = useState(true)
+  const [isLinting,  setIsLinting]  = useState(false)
+  const [lintClean,  setLintClean]  = useState(true)
 
   const [submissions, setSubmissions] = useState([])
-  const [score, setScore] = useState(0)
-  const [testCases, setTestCases] = useState([])
-  const [problem, setProblem] = useState("")
-  const [userRole, setUserRole] = useState(null)
+  const [score,       setScore]       = useState(0)
+  const [testCases,   setTestCases]   = useState([])
+  const [problem,     setProblem]     = useState("")
+  const [userRole,    setUserRole]    = useState(null)
   const [aiAssistant, setAiAssistant] = useState(null)
-  const [coolLeft, setCoolLeft] = useState(0)
-  const [chatInput, setChatInput] = useState("")
-  const [chatMessages, setChatMessages] = useState([])
+  const [coolLeft,    setCoolLeft]    = useState(0)
+  const [chatInput,   setChatInput]   = useState("")
+  const [chatMessages,setChatMessages]= useState([])
   const [hintLoading, setHintLoading] = useState(false)
-  const [chatBusy, setChatBusy] = useState(false)
-  const [hintError, setHintError] = useState("")
+  const [chatBusy,    setChatBusy]    = useState(false)
+  const [hintError,   setHintError]   = useState("")
 
-  const [showHelpModal, setShowHelpModal] = useState(false)
-  const [helpMessage, setHelpMessage] = useState("")
-  const [helpSending, setHelpSending] = useState(false)
-  const [helpSent, setHelpSent] = useState(false)
-  const [helpError, setHelpError] = useState("")
-  const [helpRequest, setHelpRequest] = useState(null)
+  const [showHelpModal,  setShowHelpModal]  = useState(false)
+  const [helpMessage,    setHelpMessage]    = useState("")
+  const [helpSending,    setHelpSending]    = useState(false)
+  const [helpSent,       setHelpSent]       = useState(false)
+  const [helpError,      setHelpError]      = useState("")
+  const [helpRequest,    setHelpRequest]    = useState(null)
   const [showReplyModal, setShowReplyModal] = useState(false)
 
   useEffect(() => {
@@ -115,47 +111,46 @@ function ExerciseWorkspace() {
     setLintClean(true)
   }, [])
 
-  // ── Real-time lint: debounced, fires 1.2s after user stops typing ──────────
+  // ── Debounced lint ─────────────────────────────────────────────────────────
   const runLint = useCallback(async (currentCode, currentLanguage) => {
     if (!currentCode.trim()) { clearMarkers(); return }
     setIsLinting(true)
     const token = localStorage.getItem("token")
     try {
       const res = await fetch(`${API_BASE_URL}/sandbox/lint`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ code: currentCode, language: currentLanguage }),
+        body:    JSON.stringify({ code: currentCode, language: currentLanguage }),
       })
       if (!res.ok) return
       const data = await res.json()
       applyMarkers(data.errors || "")
-    } catch {
-      // silently ignore lint network errors — don't disrupt the user
-    } finally {
-      setIsLinting(false)
-    }
+    } catch {}
+    finally { setIsLinting(false) }
   }, [applyMarkers, clearMarkers])
 
-  // Debounce lint on code or language change
   useEffect(() => {
     if (lintTimerRef.current) clearTimeout(lintTimerRef.current)
-    lintTimerRef.current = setTimeout(() => {
-      runLint(code, language)
-    }, LINT_DEBOUNCE_MS)
+    lintTimerRef.current = setTimeout(() => runLint(code, language), LINT_DEBOUNCE_MS)
     return () => clearTimeout(lintTimerRef.current)
   }, [code, language, runLint])
 
-  // Clear markers immediately when language switches (stale markers from old lang)
   useEffect(() => { clearMarkers() }, [language, clearMarkers])
 
   const loadExercise = useCallback(async () => {
     const token = localStorage.getItem("token")
-    const res = await fetch(`${API_BASE_URL}/exercises/${id}`, {
+    const res   = await fetch(`${API_BASE_URL}/exercises/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) return null
-    const data = await res.json()
+    const data  = await res.json()
     setProblem(data.problem || "")
+
+    // ── Apply language lock from exercise ──────────────────────────────────
+    const lock = data.languageLock || "both"
+    setLanguageLock(lock)
+    if (lock !== "both") setLanguage(lock) // force the correct language
+
     if (data.testCases) {
       setTestCases(
         data.testCases.filter((tc) => tc.isVisible)
@@ -166,8 +161,7 @@ function ExerciseWorkspace() {
       setAiAssistant(data.aiAssistant)
       setCoolLeft(data.aiAssistant.secondsUntilNextAiResponse || 0)
     } else {
-      setAiAssistant(null)
-      setCoolLeft(0)
+      setAiAssistant(null); setCoolLeft(0)
     }
     return data
   }, [id])
@@ -175,7 +169,7 @@ function ExerciseWorkspace() {
   const loadHelpRequest = useCallback(async () => {
     const token = localStorage.getItem("token")
     try {
-      const res = await fetch(`${API_BASE_URL}/exercises/${id}/my-help-request`, {
+      const res  = await fetch(`${API_BASE_URL}/exercises/${id}/my-help-request`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
@@ -216,50 +210,46 @@ function ExerciseWorkspace() {
     return () => clearTimeout(t)
   }, [coolLeft])
 
-  const hintsUsed = aiAssistant?.hintsUsed ?? 0
-  const hintLimit = aiAssistant?.hintLimit
+  const hintsUsed  = aiAssistant?.hintsUsed ?? 0
+  const hintLimit  = aiAssistant?.hintLimit
   const atHintLimit = hintLimit != null && hintsUsed >= hintLimit
   const getHintDisabled =
     userRole !== "student" || !aiAssistant?.enableAdaptiveHints ||
     atHintLimit || coolLeft > 0 || hintLoading
 
-  const handleEditorDidMount = (editor, monacoInstance) => {
-    editorRef.current = editor
-    monacoRef.current = monacoInstance
+  const isLocked   = languageLock !== "both"
+  const editorBg   = darkMode ? "#1e1e1e" : "#ffffff"
+  const monacoLang = language === "cpp" ? "cpp" : "python"
+
+  const handleEditorDidMount = (editor, monaco) => {
+    editorRef.current  = editor
+    monacoRef.current  = monaco
   }
 
   const handleRun = async () => {
-    setOutput("Running...")
-    clearMarkers()
+    setOutput("Running..."); clearMarkers()
     const token = localStorage.getItem("token")
     try {
-      const res = await fetch(`${API_BASE_URL}/sandbox/run`, {
-        method: "POST",
+      const res  = await fetch(`${API_BASE_URL}/sandbox/run`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ code, language, stdin }),
+        body:    JSON.stringify({ code, language, stdin }),
       })
       const data = await res.json()
-      const errorText = data.compile_output || data.stderr || ""
-      const successText = data.stdout || ""
-      if (errorText && !successText) {
-        setOutput(errorText)
-        applyMarkers(errorText)
-      } else {
-        setOutput(successText || "No output")
-        clearMarkers()
-      }
+      const err  = data.compile_output || data.stderr || ""
+      if (err && !data.stdout) { setOutput(err); applyMarkers(err) }
+      else { setOutput(data.stdout || "No output"); clearMarkers() }
     } catch { setOutput("Error: Could not reach server") }
   }
 
   const handleSubmit = async () => {
-    setOutput("Judging...")
-    clearMarkers()
+    setOutput("Judging..."); clearMarkers()
     const token = localStorage.getItem("token")
     try {
-      const res = await fetch(`${API_BASE_URL}/sandbox/submit`, {
-        method: "POST",
+      const res  = await fetch(`${API_BASE_URL}/sandbox/submit`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ code, language, exercise_id: id }),
+        body:    JSON.stringify({ code, language, exercise_id: id }),
       })
       const data = await res.json()
       setScore(data.score ?? 0)
@@ -273,14 +263,13 @@ function ExerciseWorkspace() {
 
   const handleGetHint = async () => {
     if (getHintDisabled) return
-    setHintError("")
-    setHintLoading(true)
+    setHintError(""); setHintLoading(true)
     const token = localStorage.getItem("token")
     try {
-      const res = await fetch(`${API_BASE_URL}/exercises/${id}/hint`, {
-        method: "POST",
+      const res  = await fetch(`${API_BASE_URL}/exercises/${id}/hint`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: null }),
+        body:    JSON.stringify({ message: null }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setHintError(typeof data.detail === "string" ? data.detail : "Could not get hint."); await loadExercise(); return }
@@ -296,18 +285,16 @@ function ExerciseWorkspace() {
     if (!msg || chatBusy) return
     if (userRole !== "student") {
       setChatMessages((prev) => [...prev, { role: "user", text: msg }, { role: "ai", text: "Sign in as a student to use AI chat." }])
-      setChatInput("")
-      return
+      setChatInput(""); return
     }
-    setChatBusy(true)
-    setChatInput("")
+    setChatBusy(true); setChatInput("")
     setChatMessages((prev) => [...prev, { role: "user", text: msg }])
     const token = localStorage.getItem("token")
     try {
-      const res = await fetch(`${API_BASE_URL}/chat`, {
-        method: "POST",
+      const res  = await fetch(`${API_BASE_URL}/chat`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: msg, exercise_id: id }),
+        body:    JSON.stringify({ message: msg, exercise_id: id }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setChatMessages((prev) => [...prev, { role: "ai", text: typeof data.detail === "string" ? data.detail : "Chat failed." }]); await loadExercise(); return }
@@ -326,21 +313,19 @@ function ExerciseWorkspace() {
     setHelpSending(true); setHelpError("")
     const token = localStorage.getItem("token")
     try {
-      const res = await fetch(`${API_BASE_URL}/exercises/${id}/help-request`, {
-        method: "POST",
+      const res  = await fetch(`${API_BASE_URL}/exercises/${id}/help-request`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: helpMessage.trim(), code_snapshot: code, language }),
+        body:    JSON.stringify({ message: helpMessage.trim(), code_snapshot: code, language }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setHelpError(typeof data.detail === "string" ? data.detail : "Could not send request."); return }
-      setHelpSent(true)
-      await loadHelpRequest()
+      setHelpSent(true); await loadHelpRequest()
     } catch { setHelpError("Network error. Please try again.") }
     finally { setHelpSending(false) }
   }
 
   const hasReply = helpRequest?.reply
-  const editorBg = darkMode ? "#1e1e1e" : "#ffffff"
 
   return (
     <>
@@ -395,19 +380,31 @@ function ExerciseWorkspace() {
             style={{ background: darkMode ? "#2d2d2d" : "#f3f3f3", borderColor: darkMode ? "#3e3e3e" : "#d1d5db" }}
           >
             <div className="flex items-center gap-2">
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="text-xs px-2 py-1 rounded border"
-                style={{ background: darkMode ? "#3c3c3c" : "#fff", color: darkMode ? "#d4d4d4" : "#111", borderColor: darkMode ? "#555" : "#d1d5db" }}
-              >
-                <option value="python">Python</option>
-                <option value="cpp">C++</option>
-              </select>
+
+              {/* Language control — locked or free */}
+              {isLocked ? (
+                <span
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border font-medium"
+                  style={{ background: darkMode ? "#3c3c3c" : "#f3f0ff", color: "#a78bfa", borderColor: darkMode ? "#6E5C86" : "#c4b5fd" }}
+                  title={`Language locked to ${language === "cpp" ? "C++" : "Python"} by instructor`}
+                >
+                  <Lock size={11} />
+                  {language === "cpp" ? "C++" : "Python"}
+                </span>
+              ) : (
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="text-xs px-2 py-1 rounded border"
+                  style={{ background: darkMode ? "#3c3c3c" : "#fff", color: darkMode ? "#d4d4d4" : "#111", borderColor: darkMode ? "#555" : "#d1d5db" }}
+                >
+                  <option value="python">Python</option>
+                  <option value="cpp">C++</option>
+                </select>
+              )}
 
               <button
-                type="button"
-                onClick={() => setDarkMode((d) => !d)}
+                type="button" onClick={() => setDarkMode((d) => !d)}
                 className="p-1 rounded"
                 style={{ background: darkMode ? "#3c3c3c" : "#e5e7eb", color: darkMode ? "#d4d4d4" : "#374151" }}
               >
@@ -415,33 +412,27 @@ function ExerciseWorkspace() {
               </button>
 
               <button
-                type="button"
-                onClick={() => setShowStdin((s) => !s)}
+                type="button" onClick={() => setShowStdin((s) => !s)}
                 className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
                 style={{
                   background: showStdin ? "#6E5C86" : (darkMode ? "#3c3c3c" : "#e5e7eb"),
-                  color: showStdin ? "#fff" : (darkMode ? "#d4d4d4" : "#374151"),
+                  color:      showStdin ? "#fff"    : (darkMode ? "#d4d4d4" : "#374151"),
                 }}
               >
                 <Terminal size={12} /> stdin
               </button>
 
-              {/* Lint status indicator */}
+              {/* Lint indicator */}
               <div className="flex items-center gap-1 text-xs" style={{ color: darkMode ? "#9cdcfe" : "#6b7280" }}>
                 {isLinting ? (
-                  <>
-                    <Loader2 size={11} className="animate-spin opacity-60" />
-                    <span className="opacity-60">checking...</span>
-                  </>
+                  <><Loader2 size={11} className="animate-spin opacity-60" /><span className="opacity-60">checking...</span></>
                 ) : lintClean ? (
                   <span className="text-green-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                    no errors
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" /> no errors
                   </span>
                 ) : (
                   <span className="text-red-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
-                    errors found
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" /> errors found
                   </span>
                 )}
               </div>
@@ -452,20 +443,16 @@ function ExerciseWorkspace() {
             </div>
 
             <div className="flex gap-2">
-              <button type="button" onClick={handleRun} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition">
-                ▶ Run
-              </button>
-              <button type="button" onClick={handleSubmit} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition">
-                Submit
-              </button>
+              <button type="button" onClick={handleRun} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition">▶ Run</button>
+              <button type="button" onClick={handleSubmit} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition">Submit</button>
             </div>
           </div>
 
-          {/* Monaco Editor */}
+          {/* Monaco */}
           <div className="flex-1 min-h-0 overflow-hidden">
             <Editor
               height="100%"
-              language={language === "cpp" ? "cpp" : "python"}
+              language={monacoLang}
               value={code}
               onChange={(v) => setCode(v || "")}
               theme={darkMode ? "vs-dark" : "light"}
@@ -496,26 +483,16 @@ function ExerciseWorkspace() {
             />
           </div>
 
-          {/* stdin panel */}
           {showStdin && (
-            <div
-              className="shrink-0 border-t px-3 py-2"
-              style={{ background: darkMode ? "#252526" : "#f9fafb", borderColor: darkMode ? "#3e3e3e" : "#e5e7eb" }}
-            >
+            <div className="shrink-0 border-t px-3 py-2" style={{ background: darkMode ? "#252526" : "#f9fafb", borderColor: darkMode ? "#3e3e3e" : "#e5e7eb" }}>
               <label className="text-xs font-semibold block mb-1" style={{ color: darkMode ? "#9cdcfe" : "#6E5C86" }}>
                 stdin — one value per line
               </label>
               <textarea
-                value={stdin}
-                onChange={(e) => setStdin(e.target.value)}
+                value={stdin} onChange={(e) => setStdin(e.target.value)} rows={3}
                 placeholder={"e.g.\n5\nhello world"}
-                rows={3}
                 className="w-full text-xs font-mono resize-none rounded px-2 py-1.5 outline-none"
-                style={{
-                  background: darkMode ? "#1e1e1e" : "#fff",
-                  color: darkMode ? "#d4d4d4" : "#111",
-                  border: `1px solid ${darkMode ? "#555" : "#d1d5db"}`,
-                }}
+                style={{ background: darkMode ? "#1e1e1e" : "#fff", color: darkMode ? "#d4d4d4" : "#111", border: `1px solid ${darkMode ? "#555" : "#d1d5db"}` }}
               />
             </div>
           )}
@@ -523,7 +500,6 @@ function ExerciseWorkspace() {
 
         {/* ── RIGHT ── */}
         <div className="col-span-1 flex flex-col overflow-hidden border-l bg-white">
-
           <div className="shrink-0 p-3 border-b">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Output</h2>
             <div className="bg-gray-900 text-green-400 rounded-lg p-2.5 h-24 overflow-auto font-mono text-xs whitespace-pre-wrap">
@@ -544,8 +520,7 @@ function ExerciseWorkspace() {
               type="button" onClick={handleGetHint} disabled={getHintDisabled}
               className="w-full bg-[#6E5C86] text-white py-1.5 rounded text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition hover:bg-[#5a4a70]"
             >
-              {hintLoading && <Loader2 size={13} className="animate-spin" />}
-              Get Hint
+              {hintLoading && <Loader2 size={13} className="animate-spin" />} Get Hint
             </button>
             {userRole !== "student" && <p className="text-xs text-gray-400 mt-1">Adaptive hints visible to students only.</p>}
           </div>
@@ -565,8 +540,7 @@ function ExerciseWorkspace() {
             </div>
             <div className="shrink-0 p-2 border-t flex gap-1.5 bg-white">
               <input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
+                value={chatInput} onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleChat()}
                 placeholder="Ask the AI..."
                 disabled={chatBusy || (userRole === "student" && coolLeft > 0)}

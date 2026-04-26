@@ -109,6 +109,7 @@ class ExerciseCreate(BaseModel):
     problem: str
     referenceSolution: str | None = None
     dueDate: str
+    languageLock: str = "both"          # "python" | "cpp" | "both"
     testCases: list[TestCaseCreate] = []
 
 
@@ -494,6 +495,10 @@ def create_exercise(
     request: ExerciseCreate,
     current_user: dict = Depends(require_role(["instructor"])),
 ):
+    # Validate languageLock value
+    if request.languageLock not in ("python", "cpp", "both"):
+        raise HTTPException(status_code=400, detail="languageLock must be 'python', 'cpp', or 'both'")
+
     with engine.connect() as conn:
         ensure_ai_configuration_schema(conn)
         conn.commit()
@@ -522,28 +527,29 @@ def create_exercise(
                     exerciseid, courseid, userid, typeid,
                     title, difficultylevel, exercisetype,
                     prerequisites, problem,
-                    referencesolution, duedate, isactive, createdat
+                    referencesolution, duedate, languagelock, isactive, createdat
                 )
                 VALUES (
                     :exerciseid, :courseid, :userid, :typeid,
                     :title, :difficultylevel, :exercisetype,
                     :prerequisites, :problem,
-                    :referencesolution, :duedate, TRUE, CURRENT_TIMESTAMP
+                    :referencesolution, :duedate, :languagelock, TRUE, CURRENT_TIMESTAMP
                 )
                 RETURNING exerciseid
             """),
             {
-                "exerciseid": str(uuid.uuid4()),
-                "courseid": request.courseId,
-                "userid": current_user["userid"],
-                "typeid": request.typeId,
-                "title": request.title,
+                "exerciseid":      str(uuid.uuid4()),
+                "courseid":        request.courseId,
+                "userid":          current_user["userid"],
+                "typeid":          request.typeId,
+                "title":           request.title,
                 "difficultylevel": request.difficultyLevel,
-                "exercisetype": request.exerciseType,
-                "prerequisites": request.prerequisites,
-                "problem": request.problem,
+                "exercisetype":    request.exerciseType,
+                "prerequisites":   request.prerequisites,
+                "problem":         request.problem,
                 "referencesolution": request.referenceSolution,
-                "duedate": request.dueDate,
+                "duedate":         request.dueDate,
+                "languagelock":    request.languageLock,
             },
         ).fetchone()
 
@@ -554,12 +560,12 @@ def create_exercise(
                     VALUES (:testcaseid, :exerciseid, :input, :expectedoutput, :weight, :isvisible)
                 """),
                 {
-                    "testcaseid": str(uuid.uuid4()),
-                    "exerciseid": str(new_exercise[0]),
-                    "input": tc.input or "",
+                    "testcaseid":     str(uuid.uuid4()),
+                    "exerciseid":     str(new_exercise[0]),
+                    "input":          tc.input or "",
                     "expectedoutput": tc.expectedOutput,
-                    "weight": 1.0,
-                    "isvisible": tc.isVisible,
+                    "weight":         1.0,
+                    "isvisible":      tc.isVisible,
                 },
             )
         conn.commit()
@@ -645,7 +651,7 @@ def request_exercise_hint(
         if not row[4]:
             raise HTTPException(status_code=400, detail="Adaptive hints are not enabled for this exercise type")
 
-        hint_limit = row[5]
+        hint_limit  = row[5]
         cooldown_sec = row[6] or 0
 
         st = conn.execute(
@@ -657,7 +663,7 @@ def request_exercise_hint(
             {"uid": current_user["userid"], "eid": exercise_id},
         ).fetchone()
         hints_used = int(st[0]) if st else 0
-        last_at = st[1] if st else None
+        last_at    = st[1] if st else None
 
         wait = seconds_until_cooldown(last_at, cooldown_sec)
         if wait > 0:
@@ -670,7 +676,7 @@ def request_exercise_hint(
             raise HTTPException(status_code=429, detail="Hint limit reached for this exercise")
 
         problem = row[2] or ""
-        extra = (request.message or "").strip()
+        extra   = (request.message or "").strip()
         question = (
             "Give a short, pedagogical nudge or hint for the following programming exercise. "
             "Do not reveal the full solution or complete working code.\n\n"
@@ -679,7 +685,7 @@ def request_exercise_hint(
         if extra:
             question += f"\nStudent context: {extra}\n"
 
-        concept = controller.detect_concept(question)
+        concept       = controller.detect_concept(question)
         response_text = rag.get_response(
             question=question,
             help_level="guided_hint",
@@ -687,7 +693,6 @@ def request_exercise_hint(
             exercise_context=problem[:2000],
         )
 
-        # hints_used applies only to this endpoint; /chat does not increment it (hint_limit vs cooldown).
         conn.execute(
             text("""
                 INSERT INTO student_exercise_ai_state (userid, exerciseid, hints_used, last_ai_response_at)
@@ -737,7 +742,8 @@ def get_exercise(
             text("""
                 SELECT exerciseid, courseid, title, difficultylevel, exercisetype,
                        prerequisites, problem, referencesolution,
-                       isactive, createdat, duedate, updatedat, typeid, userid
+                       isactive, createdat, duedate, updatedat, typeid, userid,
+                       languagelock
                 FROM exercise
                 WHERE exerciseid = :exercise_id
             """),
@@ -796,11 +802,11 @@ def get_exercise(
                 {"uid": current_user["userid"], "eid": exercise_id},
             ).fetchone()
             hints_used = int(st[0]) if st else 0
-            last_at = st[1] if st else None
-            e_adapt = bool(trow[0]) if trow else False
-            h_lim = trow[1] if trow else None
-            c_sec = int(trow[2] or 0) if trow else 0
-            cd_rem = seconds_until_cooldown(last_at, c_sec)
+            last_at    = st[1] if st else None
+            e_adapt    = bool(trow[0]) if trow else False
+            h_lim      = trow[1] if trow else None
+            c_sec      = int(trow[2] or 0) if trow else 0
+            cd_rem     = seconds_until_cooldown(last_at, c_sec)
             at_hint_limit = h_lim is not None and hints_used >= h_lim
             hint_disabled = (not e_adapt) or at_hint_limit or cd_rem > 0
             ai_assistant = {
@@ -813,26 +819,27 @@ def get_exercise(
             }
 
     payload = {
-        "exerciseId": str(exercise[0]),
-        "courseId": str(exercise[1]),
-        "title": exercise[2],
+        "exerciseId":      str(exercise[0]),
+        "courseId":        str(exercise[1]),
+        "title":           exercise[2],
         "difficultyLevel": exercise[3],
-        "exerciseType": exercise[4],
-        "prerequisites": exercise[5],
-        "problem": exercise[6],
+        "exerciseType":    exercise[4],
+        "prerequisites":   exercise[5],
+        "problem":         exercise[6],
         "referenceSolution": exercise[7],
-        "isActive": exercise[8],
-        "createdAt": exercise[9],
-        "dueDate": exercise[10],
-        "updatedAt": exercise[11],
-        "typeId": str(exercise[12]),
-        "userId": str(exercise[13]),
+        "isActive":        exercise[8],
+        "createdAt":       exercise[9],
+        "dueDate":         exercise[10],
+        "updatedAt":       exercise[11],
+        "typeId":          str(exercise[12]),
+        "userId":          str(exercise[13]),
+        "languageLock":    exercise[14] or "both",   # ← new field
         "testCases": [
             {
-                "testCaseId": str(tc[0]),
-                "input": tc[1],
+                "testCaseId":     str(tc[0]),
+                "input":          tc[1],
                 "expectedOutput": tc[2],
-                "isVisible": tc[3],
+                "isVisible":      tc[3],
             }
             for tc in test_cases
         ],
