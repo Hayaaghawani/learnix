@@ -334,3 +334,122 @@ def add_execution_summary(
         "message": "Execution summary added successfully",
         "summaryId": str(new_summary[0])
     }
+
+
+
+@router.get("/exercise/{exercise_id}/all")
+def get_all_attempts_for_exercise(
+    exercise_id: str,
+    current_user: dict = Depends(require_role(["instructor", "admin"]))
+):
+    """
+    Instructor-only endpoint.
+    Returns every attempt on an exercise with execution summary data
+    and student identity resolved from the users table.
+    """
+    with engine.connect() as conn:
+
+        # Verify the exercise belongs to a course this instructor owns
+        if current_user["role"] == "instructor":
+            ownership = conn.execute(
+                text("""
+                    SELECT 1
+                    FROM exercise e
+                    JOIN courses c ON e.courseid = c.courseid
+                    WHERE e.exerciseid = :exercise_id
+                      AND c.instructorid = :instructor_id
+                """),
+                {
+                    "exercise_id": exercise_id,
+                    "instructor_id": current_user["userid"],
+                }
+            ).fetchone()
+
+            if not ownership:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You do not have access to this exercise"
+                )
+
+        rows = conn.execute(
+            text("""
+                SELECT
+                    ea.attemptid,
+                    ea.userid,
+                    ea.attemptnumber,
+                    ea.status,
+                    ea.score,
+                    ea.hintcount,
+                    ea.passedtestcases,
+                    ea.submittedcode,
+                    u.firstname,
+                    u.lastname,
+                    u.email,
+                    es.runtimems,
+                    es.memorykb,
+                    es.passedcount   AS exec_passedcount,
+                    es.failedcount   AS exec_failedcount,
+                    es.stderr
+                FROM exerciseattempt ea
+                LEFT JOIN users u
+                    ON ea.userid = u.userid
+                LEFT JOIN executionsummary es
+                    ON ea.attemptid = es.attemptid
+                WHERE ea.exerciseid = :exercise_id
+                ORDER BY ea.attemptnumber ASC
+            """),
+            {"exercise_id": exercise_id},
+        ).fetchall()
+
+    attempts = []
+    for row in rows:
+        (
+            attempt_id, user_id, attempt_number, status, score,
+            hint_count, passed_testcases, submitted_code,
+            firstname, lastname, email,
+            runtime_ms, memory_kb,
+            exec_passed, exec_failed, stderr,
+        ) = row
+
+        full_name = f"{firstname or ''} {lastname or ''}".strip() or email or "Unknown"
+
+        attempts.append({
+            "attemptId":       str(attempt_id),
+            "userId":          str(user_id),
+            "attemptNumber":   attempt_number,
+            "status":          status,
+            "score":           float(score) if score is not None else 0.0,
+            "hintCount":       hint_count or 0,
+            "passedTestCases": passed_testcases or 0,
+            "submittedCode":   submitted_code or "",
+            "studentName":     full_name,
+            "studentEmail":    email or "",
+            # from executionsummary
+            "runtimeMs":       runtime_ms,
+            "memoryKb":        memory_kb,
+            "execPassedCount": exec_passed,
+            "execFailedCount": exec_failed,
+            "stderr":          stderr or "",
+        })
+
+    # Pre-compute aggregate stats for the frontend
+    total        = len(attempts)
+    passed_count = sum(1 for a in attempts if a["status"] == "Passed")
+    scores       = [a["score"] for a in attempts]
+    runtimes     = [a["runtimeMs"] for a in attempts if a["runtimeMs"] is not None]
+    memories     = [a["memoryKb"] for a in attempts if a["memoryKb"] is not None]
+
+    stats = {
+        "total":          total,
+        "passed":         passed_count,
+        "failed":         total - passed_count,
+        "passRate":       round(passed_count / total * 100) if total else 0,
+        "avgScore":       round(sum(scores) / total, 1)    if total else 0,
+        "highScore":      max(scores, default=0),
+        "avgRuntimeMs":   round(sum(runtimes) / len(runtimes)) if runtimes else None,
+        "avgMemoryKb":    round(sum(memories) / len(memories)) if memories else None,
+        "uniqueStudents": len({a["userId"] for a in attempts}),
+        "totalHints":     sum(a["hintCount"] for a in attempts),
+    }
+
+    return {"attempts": attempts, "stats": stats}

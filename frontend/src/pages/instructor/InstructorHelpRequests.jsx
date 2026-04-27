@@ -38,7 +38,8 @@ function InstructorHelpRequests() {
     try {
       const res = await fetch(`${API_BASE_URL}/help-requests/${requestId}`, { headers: { Authorization: `Bearer ${token}` } })
       if (!res.ok) throw new Error("Could not load details.")
-      setDetailCache((prev) => ({ ...prev, [requestId]: await res.json() }))
+     const detail = await res.json()
+setDetailCache((prev) => ({ ...prev, [requestId]: detail }))
     } catch { setDetailCache((prev) => ({ ...prev, [requestId]: { error: "Failed to load details." } })) }
     finally { setDetailLoading(false) }
   }
