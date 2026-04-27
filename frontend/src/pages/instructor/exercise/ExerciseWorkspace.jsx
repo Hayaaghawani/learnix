@@ -104,9 +104,27 @@ function ExerciseWorkspace() {
     const token = localStorage.getItem("token")
     try { const res = await fetch(`${API_BASE_URL}/exercises/${id}/my-help-request`, { headers: { Authorization: `Bearer ${token}` } }); if (!res.ok) return; const data = await res.json(); setHelpRequest(data.request || null) } catch {}
   }, [id])
+useEffect(() => {
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "{}")
+    const userId = u.userid || u.id || "guest"
+    const saved = localStorage.getItem(`code-${userId}-${id}`)
+    if (saved) setCode(saved)
+  } catch {
+    const saved = localStorage.getItem(`code-${id}`)
+    if (saved) setCode(saved)
+  }
+}, [id])
 
-  useEffect(() => { const saved = localStorage.getItem(`code-${id}`); if (saved) setCode(saved) }, [id])
-  useEffect(() => { localStorage.setItem(`code-${id}`, code) }, [code, id])
+useEffect(() => {
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "{}")
+    const userId = u.userid || u.id || "guest"
+    localStorage.setItem(`code-${userId}-${id}`, code)
+  } catch {
+    localStorage.setItem(`code-${id}`, code)
+  }
+}, [code, id])
   useEffect(() => {
     const token = localStorage.getItem("token")
     loadExercise().catch(() => setProblem("Failed to load problem."))
@@ -192,11 +210,37 @@ function ExerciseWorkspace() {
               {submissions.length === 0
                 ? <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>No submissions yet.</p>
                 : submissions.map((s, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", fontSize: 12 }}>
-                    <span style={{ color: "rgba(255,255,255,0.35)" }}>#{s.attemptNumber}</span>
-                    <span style={{ color: s.status === "Passed" ? "#4ade80" : "#f87171", fontWeight: 500 }}>{s.status} · {s.score}%</span>
-                  </div>
-                ))
+  <div
+    key={i}
+    className="text-sm border-b py-1 flex justify-between cursor-pointer hover:bg-purple-50 px-1 rounded transition-colors"
+    title="Click to load this submission's code"
+    onClick={async () => {
+      // Try local field first
+      if (s.submittedCode || s.submitted_code) {
+        setCode(s.submittedCode || s.submitted_code)
+        return
+      }
+      // Otherwise fetch the full attempt
+      if (!s.attemptId && !s.attemptid) return
+      const token = localStorage.getItem("token")
+      const aid = s.attemptId || s.attemptid
+      try {
+        const res = await fetch(`${API_BASE_URL}/attempts/${aid}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.submittedCode) setCode(data.submittedCode)
+        }
+      } catch {}
+    }}
+  >
+    <span className="text-gray-600">Attempt #{s.attemptNumber}</span>
+    <span className={s.status === "Passed" ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
+      {s.status} ({s.score}%)
+    </span>
+  </div>
+))
               }
             </div>
           </div>

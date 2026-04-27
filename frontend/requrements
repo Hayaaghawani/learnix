@@ -57,3 +57,5 @@ ALTER TABLE helprequest ADD COLUMN repliedat TIMESTAMP;
 ALTER TABLE exercise ADD COLUMN IF NOT EXISTS languagelock VARCHAR(10) DEFAULT 'both';
 
 ALTER TABLE exerciseattempt ALTER COLUMN submittedcode TYPE TEXT;
+
+https://winlibs.com/#download-release
